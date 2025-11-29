@@ -20,7 +20,7 @@ class IndicatorClass extends PanelMenu.Button {
         this.indicatorText = new St.Label({
             text: "...",
             y_align: Clutter.ActorAlign.CENTER,
-            style_class: "indicator-txt",
+            style: "padding: 0px 12px;", // Inline to avoid it being overridden by other extensions that collapse padding
         });
         this.add_child(this.indicatorText);
     }
