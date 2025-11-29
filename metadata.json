@@ -1,0 +1,9 @@
+{
+    "name": "Prayer Times",
+    "description": "A customisable prayer time and athan reminder.",
+    "url": "https://github.com/Mocab/Prayer-times-gnome",
+    "uuid": "prayertimes@mocab",
+    "shell-version": ["48", "49"],
+    "version": 2,
+    "settings-schema": "org.gnome.shell.extensions.prayertimes"
+}

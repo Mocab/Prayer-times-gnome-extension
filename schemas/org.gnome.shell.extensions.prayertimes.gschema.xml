@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    <schema id="org.gnome.shell.extensions.prayertimes" path="/org/gnome/shell/extensions/prayertimes/">
+        <key name="auto-location" type="b">
+            <summary>Automatic location</summary>
+            <default>true</default>
+            <description>Automatically detect latitude and longitude</description>
+        </key>
+        <key name="latitude" type="d">
+            <summary>Latitude</summary>
+            <default>0.0000</default>
+            <range min="-90" max="90"/>
+            <description>Custom latitude (earth y axis)</description>
+        </key>
+        <key name="longitude" type="d">
+            <summary>Longitude</summary>
+            <default>0.0000</default>
+            <range min="-180" max="180"/>
+            <description>Custom longitude (earth x axis)</description>
+        </key>
+
+        <key name="preset-angles" type="s">
+            <summary>Preset angles</summary>
+            <default>'mwl'</default>
+            <description>Manually offset the predicted Hijri date</description>
+        </key>
+        <key name="fajr-angle" type="d">
+            <summary>Fajr angle</summary>
+            <default>18</default>
+            <range min="0" max="20"/>
+            <description>Set a custom Fajr calculation angle</description>
+        </key>
+        <key name="isha-angle" type="d">
+            <summary>Isha angle</summary>
+            <default>17</default>
+            <range min="0" max="20"/>
+            <description>Set a custom Isha calculation angle</description>
+        </key>
+        <key name="asr-method" type="s">
+            <summary>Asr method</summary>
+            <default>'standard'</default>
+            <description>Set the Asr calculation method</description>
+        </key>
+        <key name="high-latitude-method" type="s">
+            <summary>High latitude method</summary>
+            <default>'night-middle'</default>
+            <description>Set the high latitude calculation method</description>
+        </key>
+        <key name="include-sunnah" type="b">
+            <summary>Include sunnah prayers</summary>
+            <default>true</default>
+            <description>Show times for sunnah prayers</description>
+        </key>
+
+        <key name="notify-prayer" type="b">
+            <summary>Send a notification prayers</summary>
+            <default>true</default>
+            <description>Send a notification for reminders and prayers</description>
+        </key>
+        <key name="athan-prayer" type="b">
+            <summary>Play athan for prayers</summary>
+            <default>true</default>
+            <description>Play the athan for each prayer</description>
+        </key>
+        <key name="reminder" type="i">
+            <summary>Notify before prayer</summary>
+            <default>0</default>
+            <range min="0" max="15"/>
+            <description>Number of minutes before prayer to send a notification</description>
+        </key>
+    </schema>
+</schemalist>
