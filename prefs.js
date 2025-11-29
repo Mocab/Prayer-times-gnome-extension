@@ -3,24 +3,21 @@ import Gtk from "gi://Gtk";
 import { ExtensionPreferences, gettext as _ } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
 export default class PrayerTimePreferences extends ExtensionPreferences {
-    #gSettings;
-    #page;
-
     fillPreferencesWindow(window) {
-        this.#gSettings = this.getSettings();
-        this.#page = new Adw.PreferencesPage();
-        window.add(this.#page);
+        const page = new Adw.PreferencesPage();
+        const gSettings = this.getSettings();
+        window.add(page);
 
-        this.#locationGroup();
-        this.#calcGroup();
-        this.#notificationGroup();
+        this.#locationGroup(page, gSettings);
+        this.#calcGroup(page, gSettings);
+        this.#notificationGroup(page, gSettings);
     }
 
-    #locationGroup() {
+    #locationGroup(page, gSettings) {
         const locationGroup = new Adw.PreferencesGroup({
             title: "Location",
         });
-        this.#page.add(locationGroup);
+        page.add(locationGroup);
 
         const autoLocation = new Adw.SwitchRow({
             title: "Automatic location",
@@ -51,9 +48,9 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         locationGroup.add(customLocation);
         customLocation.add_row(latitude);
         customLocation.add_row(longitude);
-        this.#gSettings.bind("auto-location", autoLocation, "active", 0);
-        this.#gSettings.bind("latitude", latitude, "value", 0);
-        this.#gSettings.bind("longitude", longitude, "value", 0);
+        gSettings.bind("auto-location", autoLocation, "active", 0);
+        gSettings.bind("latitude", latitude, "value", 0);
+        gSettings.bind("longitude", longitude, "value", 0);
         function updateLocationSensitivity() {
             customLocation.sensitive = !autoLocation.active;
         }
@@ -65,7 +62,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         const calcGroup = new Adw.PreferencesGroup({
             title: "Calculation",
         });
-        this.#page.add(calcGroup);
+        page.add(calcGroup);
 
         const presetAngles = [
             { id: "mwl", name: "Muslim World League (London)" },
@@ -132,7 +129,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         calcGroup.add(asrMethod);
         calcGroup.add(highLatMethod);
         calcGroup.add(includeSunnah);
-        this.#gSettings.bind_with_mapping(
+        gSettings.bind_with_mapping(
             "preset-angles",
             presetAngle,
             "selected",
@@ -145,9 +142,9 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 return new Gio.GVariant("s", presetAngles[gObject].id);
             }
         );
-        this.#gSettings.bind("fajr-angle", fajrAngle, "value", 0);
-        this.#gSettings.bind("isha-angle", ishaAngle, "value", 0);
-        this.#gSettings.bind_with_mapping(
+        gSettings.bind("fajr-angle", fajrAngle, "value", 0);
+        gSettings.bind("isha-angle", ishaAngle, "value", 0);
+        gSettings.bind_with_mapping(
             "asr-method",
             asrMethod,
             "selected",
@@ -160,7 +157,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 return new Gio.GVariant("s", (gSetting = asrMethods[gObject].id));
             }
         );
-        this.#gSettings.bind_with_mapping(
+        gSettings.bind_with_mapping(
             "high-latitude-method",
             highLatMethod,
             "selected",
@@ -178,14 +175,14 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         }
         updateAngleSensitivity();
         presetAngle.connect("notify::selected", updateAngleSensitivity);
-        this.#gSettings.bind("include-sunnah", includeSunnah, "active", 0);
+        gSettings.bind("include-sunnah", includeSunnah, "active", 0);
     }
 
     #notificationGroup() {
         const notificationGroup = new Adw.PreferencesGroup({
             title: "Notifications",
         });
-        this.#page.add(notificationGroup);
+        page.add(notificationGroup);
 
         const notifyPrayer = new Adw.SwitchRow({
             title: "Send a notification for reminders and prayers",
@@ -207,9 +204,9 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         notificationGroup.add(notifyPrayer);
         notificationGroup.add(alarmPrayer);
         notificationGroup.add(reminderTime);
-        this.#gSettings.bind("notify-prayer", notifyPrayer, "active", 0);
-        this.#gSettings.bind("athan-prayer", alarmPrayer, "active", 0);
-        this.#gSettings.bind_with_mapping(
+        gSettings.bind("notify-prayer", notifyPrayer, "active", 0);
+        gSettings.bind("athan-prayer", alarmPrayer, "active", 0);
+        gSettings.bind_with_mapping(
             "reminder",
             reminderTime,
             "selected",
