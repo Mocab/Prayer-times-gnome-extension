@@ -58,7 +58,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         autoLocation.connect("notify::active", updateLocationSensitivity);
     }
 
-    #calcGroup() {
+    #calcGroup(page, gSettings) {
         const calcGroup = new Adw.PreferencesGroup({
             title: "Calculation",
         });
@@ -178,7 +178,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         gSettings.bind("include-sunnah", includeSunnah, "active", 0);
     }
 
-    #notificationGroup() {
+    #notificationGroup(page, gSettings) {
         const notificationGroup = new Adw.PreferencesGroup({
             title: "Notifications",
         });
