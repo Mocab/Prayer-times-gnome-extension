@@ -230,7 +230,6 @@ export default class PrayerTime extends Extension {
         this._prayers = null;
 
         this._player = null;
-        this._athanFile.unref();
         this._athanFile = null;
 
         this._times = null;
