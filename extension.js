@@ -88,9 +88,9 @@ export default class PrayerTime extends Extension {
         this._settings = new SettingManager(this);
 
         this._indicator = new Indicator(this.metadata.name);
-        Main.panel.addToStatusArea(this.metadata.uuid, this._indicator, 1, "center");
+        Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
 
-        this._athanFile = Gio.File.new_for_path(this.metadata.path + "/assets/audio/athan.ogg");
+        this._athanFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
         this._player = global.display.get_sound_player();
 
         this._main();
@@ -211,7 +211,7 @@ export default class PrayerTime extends Extension {
             }
         });
 
-        this._menu = new Menu(this._prayers, this._times, this.metadata.path, this._settings.clockFormat, this._indicator.menu);
+        this._menu = new Menu(this._prayers, this._times, this.path, this._settings.clockFormat, this._indicator.menu);
     }
 
     _reloadMain() {
