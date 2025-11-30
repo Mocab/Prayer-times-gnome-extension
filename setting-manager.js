@@ -58,7 +58,7 @@ class SettingManagerClass extends GObject.Object {
                     this._reloadExtensionMain();
                 });
             } catch (error) {
-                Main.notifyError(this._name, "Failed to connect to Geoclue, defaulting to manual location: " + error.message);
+                Main.notifyError(this._name, _("Failed to connect to Geoclue, defaulting to manual location: %s").format(error.message)); // TODO: this_name translate
                 this._gSettings.set_value("auto-location", GLib.Variant.new_boolean(false));
             }
         });

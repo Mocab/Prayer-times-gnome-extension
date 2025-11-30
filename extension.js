@@ -34,7 +34,7 @@ class IndicatorClass extends PanelMenu.Button {
             .toString()
             .padStart(2, "0");
         const mm = (minutesToNext % 60).toString().padStart(2, "0");
-        this.indicatorText.set_text(`${nextName} - ${hh}:${mm}`);
+        this.indicatorText.set_text(`${nextName} - ${hh}:${mm}`); // TODO: numbers
     }
 }
 const Indicator = GObject.registerClass(IndicatorClass);
@@ -45,9 +45,9 @@ class MenuClass extends GObject.Object {
 
         let timeFormat;
         if (clockFormat === "12h") {
-            timeFormat = "%l:%M %p";
+            timeFormat = _("%l:%M %p");
         } else {
-            timeFormat = "%R";
+            timeFormat = _("%R");
         }
 
         for (const prayer of prayers) {
@@ -101,7 +101,7 @@ export default class PrayerTime extends Extension {
     _getPrayerTimes(now, midnight, dayOffset = 0) {
         if (midnight.get_day_of_week() === 5) {
             const thuhr = this._prayers.find((prayer) => prayer.id === "thuhr");
-            thuhr.name = "Jummah";
+            thuhr.name = _("Jummah");
         }
 
         const today = { day: now.add_days(dayOffset).get_day_of_month(), month: now.get_month(), year: now.get_year() };
@@ -150,12 +150,12 @@ export default class PrayerTime extends Extension {
 
     _main() {
         this._prayers = [
-            { id: "fajr", name: "Fajr" },
-            ...(this._settings.isIncludeSunnah ? [{ id: "duha", name: "Duha" }] : []), //
-            { id: "thuhr", name: "Thuhr" },
-            { id: "asr", name: "Asr" },
-            { id: "maghrib", name: "Maghrib" },
-            { id: "isha", name: "Isha" },
+            { id: "fajr", name: _("Fajr") },
+            ...(this._settings.isIncludeSunnah ? [{ id: "duha", name: _("Duha") }] : []), //
+            { id: "thuhr", name: _("Thuhr") },
+            { id: "asr", name: _("Asr") },
+            { id: "maghrib", name: _("Maghrib") },
+            { id: "isha", name: _("Isha") },
         ];
 
         let now = GLib.DateTime.new_now_local();
@@ -172,7 +172,7 @@ export default class PrayerTime extends Extension {
             nextPrayer.timeLeft--;
 
             if (nextPrayer.timeLeft === 0) {
-                const text = "Time for " + nextPrayer.name;
+                const text = _("Time for %s").format(nextPrayer.name);
 
                 this._indicator.setText(text);
 
@@ -180,7 +180,7 @@ export default class PrayerTime extends Extension {
                     Main.notify(this.metadata.name, text);
                 }
                 if (this._settings.isAthanPrayer) {
-                    this._player.play_from_file(this._athanFile, "Its time for prayer", null);
+                    this._player.play_from_file(this._athanFile, _("It's time for prayer"), null);
                 }
 
                 if (nextPrayer.i === prayers.length - 1) {
@@ -199,7 +199,7 @@ export default class PrayerTime extends Extension {
                 }
                 nextPrayer.name = this._prayers[nextPrayer.i].name;
             } else if (this._settings.reminder && nextPrayer.timeLeft === this._settings.reminder) {
-                const text = `${nextPrayer.name} in ${this._settings.reminder} minutes`;
+                const text = ngettext("%s in %d minute", "%s in %d minutes", this._settings.reminder).format(nextPrayer.name, this._settings.reminder);
 
                 this._indicator.setText(text);
 

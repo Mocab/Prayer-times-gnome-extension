@@ -1,0 +1,225 @@
+# Language translation template file
+# To submit a translation, copy this file and rename it to <language code>.po , example: ar.po for arabic. After filling up everything create a PR
+# This file and all translations are distributed under the same license as this repository.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-11-30 15:01+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+
+# 12 hour time format placeholders: %l = hours, %M = minutes,  %p = am/pm
+#: extension.js:48
+msgid "%l:%M %p"
+msgstr ""
+
+# 24 hour time format placeholder
+#: extension.js:50
+msgid "%R"
+msgstr ""
+
+#: extension.js:104
+msgid "Jummah"
+msgstr ""
+
+#: extension.js:153
+msgid "Fajr"
+msgstr ""
+
+#: extension.js:154
+msgid "Duha"
+msgstr ""
+
+#: extension.js:155
+msgid "Thuhr"
+msgstr ""
+
+#: extension.js:156
+msgid "Asr"
+msgstr ""
+
+#: extension.js:157
+msgid "Maghrib"
+msgstr ""
+
+#: extension.js:158
+msgid "Isha"
+msgstr ""
+
+# %s is a placeholder for the prayer name
+#: extension.js:175
+#, javascript-format
+msgid "Time for %s"
+msgstr ""
+
+#: extension.js:183
+msgid "It's time for prayer"
+msgstr ""
+
+# %s = prayer name, %d = minute(s) left
+#: extension.js:202
+#, javascript-format
+msgid "%s in %d minute"
+msgid_plural "%s in %d minutes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: prefs.js:18
+msgid "Location"
+msgstr ""
+
+#: prefs.js:23
+msgid "Automatic location"
+msgstr ""
+
+#: prefs.js:26
+msgid "Custom location"
+msgstr ""
+
+#: prefs.js:29
+msgid "Latitude"
+msgstr ""
+
+#: prefs.js:38
+msgid "Longitude"
+msgstr ""
+
+#: prefs.js:63
+msgid "Calculation"
+msgstr ""
+
+#: prefs.js:68
+msgid "Muslim World League (London)"
+msgstr ""
+
+#: prefs.js:69
+msgid "Egyptian General Authority of Survey"
+msgstr ""
+
+#: prefs.js:70
+msgid "Musulmans de France"
+msgstr ""
+
+#: prefs.js:71
+msgid "Islamic Society of North America"
+msgstr ""
+
+#: prefs.js:72
+msgid "Uni of Islamic Sciences (Karachi)"
+msgstr ""
+
+#: prefs.js:73
+msgid "Diyanet İşleri Başkanlığı (Turkey)"
+msgstr ""
+
+#: prefs.js:74
+msgid "Umm al-Qura Uni (Makkah)"
+msgstr ""
+
+#: prefs.js:75
+msgid "Jabatan Kemajuan Islam Malaysia"
+msgstr ""
+
+#: prefs.js:76
+msgid "Spiritual Administration of Muslims of Russia"
+msgstr ""
+
+#: prefs.js:77
+msgid "Custom"
+msgstr ""
+
+#: prefs.js:80
+msgid "Preset angles"
+msgstr ""
+
+#: prefs.js:84
+msgid "Custom angles"
+msgstr ""
+
+#: prefs.js:87
+msgid "Fajr angle"
+msgstr ""
+
+#: prefs.js:96
+msgid "Isha angle"
+msgstr ""
+
+#: prefs.js:105
+msgid "Hanbali, Maliki, Shafi"
+msgstr ""
+
+#: prefs.js:106
+msgid "Hanafi"
+msgstr ""
+
+# Asr shadow calculation method
+#: prefs.js:109
+msgid "Asr method"
+msgstr ""
+
+#: prefs.js:113
+msgid "Middle of night"
+msgstr ""
+
+#: prefs.js:114
+msgid "One seventh of night"
+msgstr ""
+
+#: prefs.js:115
+msgid "Angle based"
+msgstr ""
+
+#: prefs.js:118
+msgid "High latitude method"
+msgstr ""
+
+#: prefs.js:122
+msgid "Include sunnah prayers"
+msgstr ""
+
+#: prefs.js:183
+msgid "Notifications"
+msgstr ""
+
+#: prefs.js:188
+msgid "Send a notification for reminders and prayers"
+msgstr ""
+
+#: prefs.js:191
+msgid "Play athan for prayers"
+msgstr ""
+
+#: prefs.js:194
+msgid "Off"
+msgstr ""
+
+#: prefs.js:195
+msgid "5 minutes"
+msgstr ""
+
+#: prefs.js:196
+msgid "10 minutes"
+msgstr ""
+
+#: prefs.js:197
+msgid "15 minutes"
+msgstr ""
+
+#: prefs.js:200
+msgid "Notify before prayer"
+msgstr ""
+
+# %s is an error message
+#: setting-manager.js:61
+#, javascript-format
+msgid "Failed to connect to Geoclue, defaulting to manual location: %s"
+msgstr ""

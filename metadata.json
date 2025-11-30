@@ -5,5 +5,6 @@
     "uuid": "prayertimes@mocab",
     "shell-version": ["48", "49"],
     "version": 2,
-    "settings-schema": "org.gnome.shell.extensions.prayertimes"
+    "settings-schema": "org.gnome.shell.extensions.prayertimes",
+    "gettext-domain": "prayertimes@mocab"
 }

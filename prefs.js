@@ -15,18 +15,18 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
     #locationGroup(page, gSettings) {
         const locationGroup = new Adw.PreferencesGroup({
-            title: "Location",
+            title: _("Location"),
         });
         page.add(locationGroup);
 
         const autoLocation = new Adw.SwitchRow({
-            title: "Automatic location",
+            title: _("Automatic location"),
         });
         const customLocation = new Adw.ExpanderRow({
-            title: "Custom location",
+            title: _("Custom location"),
         });
         const latitude = new Adw.SpinRow({
-            title: "Latitude",
+            title: _("Latitude"),
             digits: 4,
             adjustment: new Gtk.Adjustment({
                 lower: -90.0,
@@ -35,7 +35,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             }),
         });
         const longitude = new Adw.SpinRow({
-            title: "Longitude",
+            title: _("Longitude"),
             digits: 4,
             adjustment: new Gtk.Adjustment({
                 lower: -180.0,
@@ -60,31 +60,31 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
     #calcGroup(page, gSettings) {
         const calcGroup = new Adw.PreferencesGroup({
-            title: "Calculation",
+            title: _("Calculation"),
         });
         page.add(calcGroup);
 
         const presetAngles = [
-            { id: "mwl", name: "Muslim World League (London)" },
-            { id: "egypt", name: "Egyptian General Authority of Survey" },
-            { id: "france", name: "Musulmans de France" },
-            { id: "isna", name: "Islamic Society of North America" },
-            { id: "karachi", name: "Uni of Islamic Sciences (Karachi)" },
-            { id: "turkey", name: "Diyanet İşleri Başkanlığı (Turkey)" },
-            { id: "makkah", name: "Umm al-Qura Uni (Makkah)" },
-            { id: "malaysia", name: "Jabatan Kemajuan Islam Malaysia" },
-            { id: "russia", name: "Spiritual Administration of Muslims of Russia" },
-            { id: "custom", name: "Custom" },
+            { id: "mwl", name: _("Muslim World League (London)") },
+            { id: "egypt", name: _("Egyptian General Authority of Survey") },
+            { id: "france", name: _("Musulmans de France") },
+            { id: "isna", name: _("Islamic Society of North America") },
+            { id: "karachi", name: _("Uni of Islamic Sciences (Karachi)") },
+            { id: "turkey", name: _("Diyanet İşleri Başkanlığı (Turkey)") },
+            { id: "makkah", name: _("Umm al-Qura Uni (Makkah)") },
+            { id: "malaysia", name: _("Jabatan Kemajuan Islam Malaysia") },
+            { id: "russia", name: _("Spiritual Administration of Muslims of Russia") },
+            { id: "custom", name: _("Custom") },
         ];
         const presetAngle = new Adw.ComboRow({
-            title: "Preset angles",
+            title: _("Preset angles"),
             model: new Gtk.StringList({ strings: presetAngles.map((a) => a.name) }),
         });
         const customAngles = new Adw.ExpanderRow({
-            title: "Custom angles",
+            title: _("Custom angles"),
         });
         const fajrAngle = new Adw.SpinRow({
-            title: "Fajr angle",
+            title: _("Fajr angle"),
             digits: 1,
             adjustment: new Gtk.Adjustment({
                 lower: 0,
@@ -93,7 +93,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             }),
         });
         const ishaAngle = new Adw.SpinRow({
-            title: "Isha angle",
+            title: _("Isha angle"),
             digits: 1,
             adjustment: new Gtk.Adjustment({
                 lower: 0,
@@ -102,24 +102,24 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             }),
         });
         const asrMethods = [
-            { id: "standard", name: "Hanbali, Maliki, Shafi" },
-            { id: "hanafi", name: "Hanafi" },
+            { id: "standard", name: _("Hanbali, Maliki, Shafi") },
+            { id: "hanafi", name: _("Hanafi") },
         ];
         const asrMethod = new Adw.ComboRow({
-            title: "Asr method",
+            title: _("Asr method"),
             model: new Gtk.StringList({ strings: asrMethods.map((a) => a.name) }),
         });
         const highLatMethods = [
-            { id: "night-middle", name: "Middle of night" },
-            { id: "night-seventh", name: "One seventh of night" },
-            { id: "angle", name: "Angle based" },
+            { id: "night-middle", name: _("Middle of night") },
+            { id: "night-seventh", name: _("One seventh of night") },
+            { id: "angle", name: _("Angle based") },
         ];
         const highLatMethod = new Adw.ComboRow({
-            title: "High latitude method",
+            title: _("High latitude method"),
             model: new Gtk.StringList({ strings: highLatMethods.map((h) => h.name) }),
         });
         const includeSunnah = new Adw.SwitchRow({
-            title: "Include sunnah prayers",
+            title: _("Include sunnah prayers"),
         });
 
         calcGroup.add(presetAngle);
@@ -154,7 +154,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 return true;
             },
             (gObject) => {
-                return new Gio.GVariant("s", (gSetting = asrMethods[gObject].id));
+                return new Gio.GVariant("s", asrMethods[gObject].id);
             }
         );
         gSettings.bind_with_mapping(
@@ -167,7 +167,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 return true;
             },
             (gObject) => {
-                return new Gio.GVariant("s", (gSetting = highLatMethods[gObject].id));
+                return new Gio.GVariant("s", highLatMethods[gObject].id);
             }
         );
         function updateAngleSensitivity() {
@@ -180,24 +180,24 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
     #notificationGroup(page, gSettings) {
         const notificationGroup = new Adw.PreferencesGroup({
-            title: "Notifications",
+            title: _("Notifications"),
         });
         page.add(notificationGroup);
 
         const notifyPrayer = new Adw.SwitchRow({
-            title: "Send a notification for reminders and prayers",
+            title: _("Send a notification for reminders and prayers"),
         });
         const alarmPrayer = new Adw.SwitchRow({
-            title: "Play athan for prayers",
+            title: _("Play athan for prayers"),
         });
         const reminderTimes = [
-            { length: 0, name: "Off" },
-            { length: 5, name: "5 minutes" },
-            { length: 10, name: "10 minutes" },
-            { length: 15, name: "15 minutes" },
+            { length: 0, name: _("Off") },
+            { length: 5, name: _("5 minutes") },
+            { length: 10, name: _("10 minutes") },
+            { length: 15, name: _("15 minutes") },
         ];
         const reminderTime = new Adw.ComboRow({
-            title: "Notify before prayer",
+            title: _("Notify before prayer"),
             model: new Gtk.StringList({ strings: reminderTimes.map((r) => r.name) }),
         });
 
@@ -216,7 +216,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 return true;
             },
             (gObject) => {
-                return new Gio.GVariant("i", (gSetting = reminderTimes[gObject].length));
+                return new Gio.GVariant("i", reminderTimes[gObject].length);
             }
         );
     }
