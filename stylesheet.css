@@ -1,6 +1,7 @@
 .prayer-name {
     padding: 0 6px;
 }
-.prayer-time {
-    color: #eee;
+.active {
+    font-weight: 500;
+    color: #fff;
 }

@@ -21,13 +21,14 @@ Highly customizable and efficient prayer time and athan reminder extension for G
     -   Send notifications for prayers
     -   Play a shorter version of an athan for prayers
     -   Reminders before prayer time
--   Display: Automatic clock format detection
+-   Display:
+    -   Automatic clock format detection
+    -   Highlight current prayer in menu
 
 ### :hammer: TODO:
 
 -   Add localisation and translation support
 -   Allow for custom time zones
--   Highlight current prayer in menu
 -   Add icons to notifications
 -   Add support for custom times (jamaaha) (manual preset and potentially csv)
 -   Add current hijri date

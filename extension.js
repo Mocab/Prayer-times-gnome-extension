@@ -40,15 +40,12 @@ class IndicatorClass extends PanelMenu.Button {
 const Indicator = GObject.registerClass(IndicatorClass);
 
 class MenuClass extends GObject.Object {
-    _init(prayers, times, extensionPath, clockFormat, menu) {
+    _init(prayers, times, nextPrayerI, extensionPath, clockFormat, menu) {
         super._init();
+        this._menu = menu;
+        this.menuItems = [];
 
-        let timeFormat;
-        if (clockFormat === "12h") {
-            timeFormat = _("%l:%M %p");
-        } else {
-            timeFormat = _("%R");
-        }
+        const timeFormat = clockFormat === "12h" ? _("%l:%M %p") : (timeFormat = _("%R"));
 
         for (const prayer of prayers) {
             const menuItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, activate: false, hover: false });
@@ -69,12 +66,27 @@ class MenuClass extends GObject.Object {
             menuItem.add_child(
                 new St.Label({
                     text: times[prayer.id].format(timeFormat),
-                    style_class: "prayer-time",
                 })
             );
 
             menu.addMenuItem(menuItem);
+            this.menuItems.push(menuItem);
         }
+
+        this.highlightActiveMenuItem(nextPrayerI);
+    }
+
+    highlightActiveMenuItem(i) {
+        if (i > 0) {
+            this.menuItems[i - 1].remove_style_class_name("active");
+        }
+        this.menuItems[i].add_style_class_name("active");
+    }
+
+    destroy() {
+        this.menuItems = null;
+        this._menu.removeAll();
+        this._menu = null;
     }
 }
 const Menu = GObject.registerClass(MenuClass);
@@ -184,6 +196,8 @@ export default class PrayerTime extends Extension {
                     this._player.play_from_file(this._athanFile, _("It's time for prayer"), null);
                 }
 
+                this._menu.highlightActiveMenuItem(nextPrayer.i);
+
                 if (nextPrayer.i === prayers.length - 1) {
                     // If last prayer move to next day
                     const now = GLib.DateTime.new_now_local();
@@ -195,6 +209,9 @@ export default class PrayerTime extends Extension {
                     }
                     this.nextPrayer.timeLeft = this._differenceToMinutes(this._times.fajr.difference(now));
                     nextPrayer.i = 0;
+
+                    this._menu.destroy();
+                    this._menu = new Menu(this._prayers, this._times, this.path, this._settings.clockFormat, this._indicator.menu);
                 } else {
                     nextPrayer.i++;
                 }
@@ -212,15 +229,15 @@ export default class PrayerTime extends Extension {
             }
         });
 
-        this._menu = new Menu(this._prayers, this._times, this.path, this._settings.clockFormat, this._indicator.menu);
+        this._menu = new Menu(this._prayers, this._times, nextPrayer.i, this.path, this._settings.clockFormat, this._indicator.menu);
     }
 
     _reloadMain() {
         GLib.Source.remove(this._timeoutId);
         this._timeoutId = null;
 
-        this._indicator.menu.removeAll();
-        this._indicator.menu = null;
+        this._menu.destroy();
+        this._menu = null;
 
         this._main();
     }
@@ -235,8 +252,7 @@ export default class PrayerTime extends Extension {
 
         this._times = null;
 
-        this._indicator.menu.removeAll();
-        this._indicator.menu = null;
+        this._menu.destroy();
         this._menu = null;
         this._indicator.destroy();
         this._indicator = null;
