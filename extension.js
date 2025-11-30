@@ -98,13 +98,13 @@ export default class PrayerTime extends Extension {
         this._settings.connectSettings();
     }
 
-    _getPrayerTimes(now, midnight, dayOffset = 0) {
+    _getDatePrayerTimes(now, midnight) {
         if (midnight.get_day_of_week() === 5) {
             const thuhr = this._prayers.find((prayer) => prayer.id === "thuhr");
             thuhr.name = _("Jummah");
         }
 
-        const today = { day: now.add_days(dayOffset).get_day_of_month(), month: now.get_month(), year: now.get_year() };
+        const today = { day: now.get_day_of_month(), month: now.get_month(), year: now.get_year() };
         return new CalcPrayerTimes(today, this._settings.location, this._settings.calcAngles, this._settings.asrMethod, this._settings.highLatitudeMethod);
     }
 
@@ -133,16 +133,16 @@ export default class PrayerTime extends Extension {
                 return { timeLeft: this._differenceToMinutes(timeToIshaUs), i };
             } else {
                 // Yesterday isha is after midnight (edge case)
-                this._times = this._getPrayerTimes(now, midnight, -1);
+                this._times = this._getDatePrayerTimes(now.add_days(-1), midnight);
                 return { timeLeft: this._differenceToMinutes(this._times.isha.difference(now)), i };
             }
         } else {
             // No prayers left for today
             i = 0;
             if (isNowBeforeMidnight) {
-                this._times = this._getPrayerTimes(now, midnight, +1);
+                this._times = this._getDatePrayerTimes(now.add_days(1), midnight);
             } else {
-                this._times = this._getPrayerTimes(now, midnight);
+                this._times = this._getDatePrayerTimes(now, midnight);
             }
             return { timeLeft: this._differenceToMinutes(this._times.fajr.difference(now)), i };
         }
@@ -160,8 +160,9 @@ export default class PrayerTime extends Extension {
 
         let now = GLib.DateTime.new_now_local();
         let midnight = GLib.DateTime.new_local(now.get_year(), now.get_month(), now.get_day_of_month(), 0, 0, 0.0);
-        this._times = this._getPrayerTimes(now, midnight);
+        this._times = this._getDatePrayerTimes(now, midnight);
         let nextPrayer = this._getNextPrayer(now, midnight);
+
         nextPrayer.name = this._prayers[nextPrayer.i].name;
         // No longer needed for now
         now = null;
@@ -188,9 +189,9 @@ export default class PrayerTime extends Extension {
                     const now = GLib.DateTime.new_now_local();
                     const midnight = GLib.DateTime.new_now_local(now.get_year(), now.get_month(), now.get_day_of_month(), 0, 0, 0.0);
                     if (midnight.compare(now) === -1) {
-                        this._times = this._getPrayerTimes(now, midnight, +1);
+                        this._times = this._getDatePrayerTimes(now.add_days(1), midnight);
                     } else {
-                        this._times = this._getPrayerTimes(now, midnight);
+                        this._times = this._getDatePrayerTimes(now, midnight);
                     }
                     this.nextPrayer.timeLeft = this._differenceToMinutes(this._times.fajr.difference(now));
                     nextPrayer.i = 0;
