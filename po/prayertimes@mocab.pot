@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-11-30 15:01+0000\n"
+"POT-Creation-Date: 2025-12-01 18:53+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -23,50 +23,46 @@ msgid "%l:%M %p"
 msgstr ""
 
 # 24 hour time format placeholder
-#: extension.js:50
+#: extension.js:48
 msgid "%R"
 msgstr ""
 
-#: extension.js:104
+#: extension.js:116
 msgid "Jummah"
 msgstr ""
 
-#: extension.js:153
+#: extension.js:165
 msgid "Fajr"
 msgstr ""
 
-#: extension.js:154
+#: extension.js:166
 msgid "Duha"
 msgstr ""
 
-#: extension.js:155
+#: extension.js:167
 msgid "Thuhr"
 msgstr ""
 
-#: extension.js:156
+#: extension.js:168
 msgid "Asr"
 msgstr ""
 
-#: extension.js:157
+#: extension.js:169
 msgid "Maghrib"
 msgstr ""
 
-#: extension.js:158
+#: extension.js:170
 msgid "Isha"
 msgstr ""
 
 # %s is a placeholder for the prayer name
-#: extension.js:175
+#: extension.js:188
 #, javascript-format
 msgid "Time for %s"
 msgstr ""
 
-#: extension.js:183
-msgid "It's time for prayer"
-msgstr ""
-
 # %s = prayer name, %d = minute(s) left
-#: extension.js:202
+#: extension.js:219
 #, javascript-format
 msgid "%s in %d minute"
 msgid_plural "%s in %d minutes"
@@ -94,7 +90,7 @@ msgid "Longitude"
 msgstr ""
 
 #: prefs.js:63
-msgid "Calculation"
+msgid "Calculations"
 msgstr ""
 
 #: prefs.js:68
@@ -161,9 +157,8 @@ msgstr ""
 msgid "Hanafi"
 msgstr ""
 
-# Asr shadow calculation method
 #: prefs.js:109
-msgid "Asr method"
+msgid "Asr shadow method"
 msgstr ""
 
 #: prefs.js:113
@@ -191,11 +186,11 @@ msgid "Notifications"
 msgstr ""
 
 #: prefs.js:188
-msgid "Send a notification for reminders and prayers"
+msgid "Send notifications"
 msgstr ""
 
 #: prefs.js:191
-msgid "Play athan for prayers"
+msgid "Play a sound for prayers"
 msgstr ""
 
 #: prefs.js:194
