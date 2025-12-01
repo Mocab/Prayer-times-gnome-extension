@@ -216,7 +216,7 @@ export default class PrayerTime extends Extension {
                 nextPrayer.name = this._prayers[nextPrayer.i].name;
                 nextPrayer.timeLeft = this._differenceToMinutes(this._times[this._prayers[nextPrayer.i]].difference(now));
             } else if (this._settings.reminder && nextPrayer.timeLeft === this._settings.reminder) {
-                const text = ngettext("%s in %d minute", "%s in %d minutes", this._settings.reminder).format(nextPrayer.name, this._settings.reminder);
+                const text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder); // Values are 0, 5, 15, 15 so ngettext not needed
 
                 this._indicator.setText(text);
 

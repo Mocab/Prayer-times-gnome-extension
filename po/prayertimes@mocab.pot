@@ -64,10 +64,8 @@ msgstr ""
 # %s = prayer name, %d = minute(s) left
 #: extension.js:219
 #, javascript-format
-msgid "%s in %d minute"
-msgid_plural "%s in %d minutes"
-msgstr[0] ""
-msgstr[1] ""
+msgid "%s in %d minutes"
+msgstr ""
 
 #: prefs.js:18
 msgid "Location"
@@ -174,7 +172,7 @@ msgid "Angle based"
 msgstr ""
 
 #: prefs.js:118
-msgid "High latitude method"
+msgid "High latitude adjustment"
 msgstr ""
 
 #: prefs.js:122
