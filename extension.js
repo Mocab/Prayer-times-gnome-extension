@@ -34,7 +34,7 @@ class IndicatorClass extends PanelMenu.Button {
             .toString()
             .padStart(2, "0");
         const mm = (minutesToNext % 60).toString().padStart(2, "0");
-        this.indicatorText.set_text(`${nextName} - ${hh}:${mm}`); // TODO: numbers
+        this.indicatorText.set_text(`${nextName} - ${hh}:${mm}`);
     }
 }
 const Indicator = GObject.registerClass(IndicatorClass);
@@ -73,10 +73,10 @@ class MenuClass extends GObject.Object {
             this.menuItems.push(menuItem);
         }
 
-        this.highlightActiveMenuItem(nextPrayerI);
+        this.highlightMenuItem(nextPrayerI);
     }
 
-    highlightActiveMenuItem(i) {
+    highlightMenuItem(i) {
         if (i > 0) {
             this.menuItems[i - 1].remove_style_class_name("active");
         }
@@ -196,8 +196,6 @@ export default class PrayerTime extends Extension {
                     this._player.play_from_file(this._soundFile, text, null);
                 }
 
-                this._menu.highlightActiveMenuItem(nextPrayer.i);
-
                 // If last prayer move to next day
                 const now = GLib.DateTime.new_now_local();
                 if (nextPrayer.i === prayers.length - 1) {
@@ -213,6 +211,7 @@ export default class PrayerTime extends Extension {
                     this._menu = new Menu(this._prayers, this._times, this.path, this._settings.clockFormat, this._indicator.menu);
                 } else {
                     nextPrayer.i++;
+                    this._menu.highlightMenuItem(nextPrayer.i);
                 }
                 nextPrayer.name = this._prayers[nextPrayer.i].name;
                 nextPrayer.timeLeft = this._differenceToMinutes(this._times[this._prayers[nextPrayer.i]].difference(now));

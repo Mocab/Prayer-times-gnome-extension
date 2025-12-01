@@ -23,7 +23,7 @@ Highly customizable and efficient prayer time and athan reminder extension for G
     -   Reminders before prayer time
 -   Display:
     -   Automatic clock format detection
-    -   Highlight current prayer in menu
+    -   Highlight next prayer in menu
 
 ### :hammer: TODO:
 
