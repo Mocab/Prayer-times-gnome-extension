@@ -227,6 +227,7 @@ export default class PrayerTime extends Extension {
             } else {
                 this._indicator.setTimeLeftText(nextPrayer.name, nextPrayer.timeLeft);
             }
+            return GLib.SOURCE_CONTINUE;
         });
 
         this._menu = new Menu(this._prayers, this._times, nextPrayer.i, this.path, this._settings.clockFormat, this._indicator.menu);
