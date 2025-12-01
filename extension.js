@@ -198,16 +198,15 @@ export default class PrayerTime extends Extension {
 
                 this._menu.highlightActiveMenuItem(nextPrayer.i);
 
+                // If last prayer move to next day
+                const now = GLib.DateTime.new_now_local();
                 if (nextPrayer.i === prayers.length - 1) {
-                    // If last prayer move to next day
-                    const now = GLib.DateTime.new_now_local();
                     const midnight = GLib.DateTime.new_now_local(now.get_year(), now.get_month(), now.get_day_of_month(), 0, 0, 0.0);
                     if (midnight.compare(now) === -1) {
                         this._times = this._getDatePrayerTimes(now.add_days(1), midnight);
                     } else {
                         this._times = this._getDatePrayerTimes(now, midnight);
                     }
-                    this.nextPrayer.timeLeft = this._differenceToMinutes(this._times.fajr.difference(now));
                     nextPrayer.i = 0;
 
                     this._menu.destroy();
@@ -216,6 +215,7 @@ export default class PrayerTime extends Extension {
                     nextPrayer.i++;
                 }
                 nextPrayer.name = this._prayers[nextPrayer.i].name;
+                nextPrayer.timeLeft = this._differenceToMinutes(this._times[this._prayers[nextPrayer.i]].difference(now));
             } else if (this._settings.reminder && nextPrayer.timeLeft === this._settings.reminder) {
                 const text = ngettext("%s in %d minute", "%s in %d minutes", this._settings.reminder).format(nextPrayer.name, this._settings.reminder);
 
