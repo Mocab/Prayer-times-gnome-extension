@@ -115,7 +115,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             { id: "angle", name: _("Angle based") },
         ];
         const highLatAdjustment = new Adw.ComboRow({
-            title: _("High latitude method"),
+            title: _("High latitude adjustment"),
             model: new Gtk.StringList({ strings: highLatAdjustments.map((h) => h.name) }),
         });
         const includeSunnah = new Adw.SwitchRow({
