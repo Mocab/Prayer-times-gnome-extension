@@ -1,0 +1,216 @@
+# This file and all translations are distributed under the same license as this repository.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: 5\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-12-01 18:53+0000\n"
+"PO-Revision-Date: 2025-12-01 18:53+0000\n"
+"Last-Translator: Mocab <>\n"
+"Language-Team: Arabic <LL@li.org>\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
+
+# 12 hour time format placeholders: %l = hours, %M = minutes,  %p = am/pm
+#: extension.js:48
+msgid "%l:%M %p"
+msgstr "%l:%M %p"
+
+# 24 hour time format placeholder
+#: extension.js:48
+msgid "%R"
+msgstr "%R"
+
+#: extension.js:116
+msgid "Jummah"
+msgstr "الجمعة"
+
+#: extension.js:165
+msgid "Fajr"
+msgstr "الفجر"
+
+#: extension.js:166
+msgid "Duha"
+msgstr "الضحى"
+
+#: extension.js:167
+msgid "Thuhr"
+msgstr "الظهر"
+
+#: extension.js:168
+msgid "Asr"
+msgstr "العصر"
+
+#: extension.js:169
+msgid "Maghrib"
+msgstr "المغرب"
+
+#: extension.js:170
+msgid "Isha"
+msgstr "العشاء"
+
+# %s is a placeholder for the prayer name
+#: extension.js:188
+#, javascript-format
+msgid "Time for %s"
+msgstr "%s وقت صلاة"
+
+# %s = prayer name, %d = minute(s) left
+#: extension.js:219
+#, javascript-format
+msgid "%s in %d minutes"
+msgstr "دقيقة %d في %s صلاة"
+
+#: prefs.js:18
+msgid "Location"
+msgstr "المكان"
+
+#: prefs.js:23
+msgid "Automatic location"
+msgstr "مكان تلقائي"
+
+#: prefs.js:26
+msgid "Custom location"
+msgstr "مكان محددة"
+
+#: prefs.js:29
+msgid "Latitude"
+msgstr "زاوية العرض"
+
+#: prefs.js:38
+msgid "Longitude"
+msgstr "زاوية الطول"
+
+#: prefs.js:63
+msgid "Calculations"
+msgstr "المحاسبات"
+
+#: prefs.js:68
+msgid "Muslim World League (London)"
+msgstr "رابطة العالم الإسلامي (لندن)"
+
+#: prefs.js:69
+msgid "Egyptian General Authority of Survey"
+msgstr "الهيئة المصرية العامة للمساحة"
+
+#: prefs.js:70
+msgid "Musulmans de France"
+msgstr "مسلمون فرنسا"
+
+#: prefs.js:71
+msgid "Islamic Society of North America"
+msgstr "الجمعية الإسلامية لأمريكا الشمالية"
+
+#: prefs.js:72
+msgid "Uni of Islamic Sciences (Karachi)"
+msgstr "جامعة العلوم الإسلامية (كراتشي)"
+
+#: prefs.js:73
+msgid "Diyanet İşleri Başkanlığı (Turkey)"
+msgstr "رئاسة الشؤون الدينية (تركيا)"
+
+#: prefs.js:74
+msgid "Umm al-Qura Uni (Makkah)"
+msgstr "جامعة أم القرى (مكة المكرمة)"
+
+#: prefs.js:75
+msgid "Jabatan Kemajuan Islam Malaysia"
+msgstr "وزارة التنمية الإسلامية الماليزية"
+
+#: prefs.js:76
+msgid "Spiritual Administration of Muslims of Russia"
+msgstr "الإدارة الروحية للمسلمين في روسيا"
+
+#: prefs.js:77
+msgid "Custom"
+msgstr "محددة"
+
+#: prefs.js:80
+msgid "Preset angles"
+msgstr "الزاوية المحددة"
+
+#: prefs.js:84
+msgid "Custom angles"
+msgstr "حدد الزاوية"
+
+#: prefs.js:87
+msgid "Fajr angle"
+msgstr "زاوية الفجر"
+
+#: prefs.js:96
+msgid "Isha angle"
+msgstr "زاوية العشاء"
+
+#: prefs.js:105
+msgid "Hanbali, Maliki, Shafi"
+msgstr "حنبلي، مالكي، شافعي"
+
+#: prefs.js:106
+msgid "Hanafi"
+msgstr "حنافي"
+
+#: prefs.js:109
+msgid "Asr shadow method"
+msgstr "نظام الظل العصر"
+
+#: prefs.js:113
+msgid "Middle of night"
+msgstr "وسط الليل"
+
+#: prefs.js:114
+msgid "One seventh of night"
+msgstr "سُبع الليل"
+
+#: prefs.js:115
+msgid "Angle based"
+msgstr "الزاوية"
+
+#: prefs.js:118
+msgid "High latitude adjustment"
+msgstr "تعديل درجة العرض العالية"
+
+#: prefs.js:122
+msgid "Include sunnah prayers"
+msgstr "أضف صلاة السنة"
+
+#: prefs.js:183
+msgid "Notifications"
+msgstr "التذكيرات"
+
+#: prefs.js:188
+msgid "Send notifications"
+msgstr "إرسل تذكيرات"
+
+#: prefs.js:191
+msgid "Play a sound for prayers"
+msgstr "شغل صوت للتذكير"
+
+#: prefs.js:194
+msgid "Off"
+msgstr "مغلق"
+
+#: prefs.js:195
+msgid "5 minutes"
+msgstr "٥ دقائق"
+
+#: prefs.js:196
+msgid "10 minutes"
+msgstr "١٠ دقيقة"
+
+#: prefs.js:197
+msgid "15 minutes"
+msgstr "١٥ دقيقة"
+
+#: prefs.js:200
+msgid "Notify before prayer"
+msgstr "ذكر قبل الصلاة"
+
+# %s is an error message
+#: setting-manager.js:61
+#, javascript-format
+msgid "Failed to connect to Geoclue, defaulting to manual location: %s"
+msgstr "%s :فشل الحصول على المكان التلقائي، سيتم التبديل إلى  المكان المحددة"
