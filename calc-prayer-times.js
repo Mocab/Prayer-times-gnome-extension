@@ -11,7 +11,7 @@ export class CalcPrayerTimes {
     #timeEq;
     #midDayTime;
 
-    constructor(today, location, calcAngles, asrMethod, highLatitudeMethod) {
+    constructor(today, location, calcAngles, asrMethod, highLatAdjustment) {
         // Global values
         this.#today = today;
         this.#location = location;
@@ -38,8 +38,8 @@ export class CalcPrayerTimes {
         }
 
         const nightLen = sunriseTime + 24 - sunsetTime;
-        timeFromMidnight.fajr = this.#adjustHighLat(highLatitudeMethod, timeFromMidnight.fajr, fajrAngle, sunriseTime, nightLen, -1);
-        timeFromMidnight.isha = this.#adjustHighLat(highLatitudeMethod, timeFromMidnight.isha, ishaAngle, sunsetTime, nightLen);
+        timeFromMidnight.fajr = this.#adjustHighLat(highLatAdjustment, timeFromMidnight.fajr, fajrAngle, sunriseTime, nightLen, -1);
+        timeFromMidnight.isha = this.#adjustHighLat(highLatAdjustment, timeFromMidnight.isha, ishaAngle, sunsetTime, nightLen);
 
         // Store final values in this instance
         Object.entries(timeFromMidnight).forEach(([key, value]) => {
@@ -86,9 +86,9 @@ export class CalcPrayerTimes {
         return -this.#arccot(shadowFactor + this.#tan(Math.abs(this.#location.latitude - this.#sunDecl)));
     }
 
-    #adjustHighLat(highLatitudeMethod, time, angle, base, nightLen, direction = 1) {
+    #adjustHighLat(highLatAdjustment, time, angle, base, nightLen, direction = 1) {
         let factor;
-        switch (highLatitudeMethod) {
+        switch (highLatAdjustment) {
             case "night-middle":
                 factor = 0.5;
             case "night-seventh":

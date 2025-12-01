@@ -4,7 +4,7 @@
         <key name="auto-location" type="b">
             <summary>Automatic location</summary>
             <default>true</default>
-            <description>Automatically detect latitude and longitude</description>
+            <description>Automatically detect location (latitude and longitude)</description>
         </key>
         <key name="latitude" type="d">
             <summary>Latitude</summary>
@@ -22,7 +22,7 @@
         <key name="preset-angles" type="s">
             <summary>Preset angles</summary>
             <default>'mwl'</default>
-            <description>Manually offset the predicted Hijri date</description>
+            <description>Preset Fajr and Isha calculation angles</description>
         </key>
         <key name="fajr-angle" type="d">
             <summary>Fajr angle</summary>
@@ -37,14 +37,14 @@
             <description>Set a custom Isha calculation angle</description>
         </key>
         <key name="asr-method" type="s">
-            <summary>Asr method</summary>
+            <summary>Asr shadow method</summary>
             <default>'standard'</default>
-            <description>Set the Asr calculation method</description>
+            <description>Set the Asr shadow calculation method</description>
         </key>
-        <key name="high-latitude-method" type="s">
-            <summary>High latitude method</summary>
+        <key name="high-latitude-adjustment" type="s">
+            <summary>High latitude adjustment</summary>
             <default>'night-middle'</default>
-            <description>Set the high latitude calculation method</description>
+            <description>Set the high latitude adjustment method</description>
         </key>
         <key name="include-sunnah" type="b">
             <summary>Include sunnah prayers</summary>
@@ -53,20 +53,20 @@
         </key>
 
         <key name="notify-prayer" type="b">
-            <summary>Send a notification prayers</summary>
+            <summary>Send notifications</summary>
             <default>true</default>
             <description>Send a notification for reminders and prayers</description>
         </key>
-        <key name="athan-prayer" type="b">
-            <summary>Play athan for prayers</summary>
+        <key name="sound-player" type="b">
+            <summary>Play a sound for prayers</summary>
             <default>true</default>
-            <description>Play the athan for each prayer</description>
+            <description>Play a sound for each prayer</description>
         </key>
         <key name="reminder" type="i">
             <summary>Notify before prayer</summary>
             <default>0</default>
             <range min="0" max="15"/>
-            <description>Number of minutes before prayer to send a notification</description>
+            <description>Number of minutes before a prayer to send a notification</description>
         </key>
     </schema>
 </schemalist>

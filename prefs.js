@@ -60,7 +60,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
     #calcGroup(page, gSettings) {
         const calcGroup = new Adw.PreferencesGroup({
-            title: _("Calculation"),
+            title: _("Calculations"),
         });
         page.add(calcGroup);
 
@@ -106,17 +106,17 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             { id: "hanafi", name: _("Hanafi") },
         ];
         const asrMethod = new Adw.ComboRow({
-            title: _("Asr method"),
+            title: _("Asr shadow method"),
             model: new Gtk.StringList({ strings: asrMethods.map((a) => a.name) }),
         });
-        const highLatMethods = [
+        const highLatAdjustments = [
             { id: "night-middle", name: _("Middle of night") },
             { id: "night-seventh", name: _("One seventh of night") },
             { id: "angle", name: _("Angle based") },
         ];
-        const highLatMethod = new Adw.ComboRow({
+        const highLatAdjustment = new Adw.ComboRow({
             title: _("High latitude method"),
-            model: new Gtk.StringList({ strings: highLatMethods.map((h) => h.name) }),
+            model: new Gtk.StringList({ strings: highLatAdjustments.map((h) => h.name) }),
         });
         const includeSunnah = new Adw.SwitchRow({
             title: _("Include sunnah prayers"),
@@ -127,7 +127,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         customAngles.add_row(fajrAngle);
         customAngles.add_row(ishaAngle);
         calcGroup.add(asrMethod);
-        calcGroup.add(highLatMethod);
+        calcGroup.add(highLatAdjustment);
         calcGroup.add(includeSunnah);
         gSettings.bind_with_mapping(
             "preset-angles",
@@ -158,16 +158,16 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             }
         );
         gSettings.bind_with_mapping(
-            "high-latitude-method",
-            highLatMethod,
+            "high-latitude-adjustment",
+            highLatAdjustment,
             "selected",
             0,
             (gObject, gSetting) => {
-                gObject = highLatMethods.indexOf((object) => object.id === gSetting.unpack());
+                gObject = highLatAdjustments.indexOf((object) => object.id === gSetting.unpack());
                 return true;
             },
             (gObject) => {
-                return new Gio.GVariant("s", highLatMethods[gObject].id);
+                return new Gio.GVariant("s", highLatAdjustments[gObject].id);
             }
         );
         function updateAngleSensitivity() {
@@ -185,10 +185,10 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         page.add(notificationGroup);
 
         const notifyPrayer = new Adw.SwitchRow({
-            title: _("Send a notification for reminders and prayers"),
+            title: _("Send notifications"),
         });
-        const alarmPrayer = new Adw.SwitchRow({
-            title: _("Play athan for prayers"),
+        const soundPlayer = new Adw.SwitchRow({
+            title: _("Play a sound for prayers"),
         });
         const reminderTimes = [
             { length: 0, name: _("Off") },
@@ -202,10 +202,10 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
 
         notificationGroup.add(notifyPrayer);
-        notificationGroup.add(alarmPrayer);
+        notificationGroup.add(soundPlayer);
         notificationGroup.add(reminderTime);
         gSettings.bind("notify-prayer", notifyPrayer, "active", 0);
-        gSettings.bind("athan-prayer", alarmPrayer, "active", 0);
+        gSettings.bind("sound-player", soundPlayer, "active", 0);
         gSettings.bind_with_mapping(
             "reminder",
             reminderTime,

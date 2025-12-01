@@ -34,11 +34,11 @@ class SettingManagerClass extends GObject.Object {
         }
 
         this.asrMethod = this._gSettings.get_string("asr-method");
-        this.highLatitudeMethod = this._gSettings.get_string("high-latitude-method");
+        this.highLatAdjustment = this._gSettings.get_string("high-latitude-adjustment");
         this.includeSunnah = this._gSettings.get_boolean("include-sunnah");
         // Notification group
         this.isNotifyPrayer = this._gSettings.get_boolean("notify-prayer");
-        this.isAthanPrayer = this._gSettings.get_boolean("athan-prayer");
+        this.isSoundPlayer = this._gSettings.get_boolean("sound-player");
         this.reminder = this._gSettings.get_int("reminder");
     }
 
@@ -122,8 +122,8 @@ class SettingManagerClass extends GObject.Object {
             this.asrMethod = gSetting.get_string(key);
             this._reloadExtensionMain();
         });
-        this._gSettingListener.highLatitudeMethod = this._gSettings.connect("changed::high-latitude-method", (gSetting, key) => {
-            this.highLatitudeMethod = gSetting.get_string(key);
+        this._gSettingListener.highLatAdjustment = this._gSettings.connect("changed::high-latitude-adjustment", (gSetting, key) => {
+            this.highLatAdjustment = gSetting.get_string(key);
             this._reloadExtensionMain();
         });
         this._gSettingListener.isIncludeSunnah = this._gSettings.connect("changed::include-sunnah", (gSetting, key) => {
@@ -134,8 +134,8 @@ class SettingManagerClass extends GObject.Object {
         this._gSettingListener.isNotifyPrayer = this._gSettings.connect("changed::notify-prayer", (gSetting, key) => {
             this.isNotifyPrayer = gSetting.get_boolean(key);
         });
-        this._gSettingListener.isAthanPrayer = this._gSettings.connect("changed::athan-prayer", (gSetting, key) => {
-            this.isAthanPrayer = gSetting.get_boolean(key);
+        this._gSettingListener.isSoundPlayer = this._gSettings.connect("changed::sound-player", (gSetting, key) => {
+            this.isSoundPlayer = gSetting.get_boolean(key);
         });
         this._gSettingListener.reminder = this._gSettings.connect("changed::reminder", (gSetting, key) => {
             this.reminder = gSetting.get_int(key);

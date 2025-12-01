@@ -102,7 +102,7 @@ export default class PrayerTime extends Extension {
         this._indicator = new Indicator(this.metadata.name);
         Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
 
-        this._athanFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
+        this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
         this._player = global.display.get_sound_player();
 
         this._main();
@@ -117,7 +117,7 @@ export default class PrayerTime extends Extension {
         }
 
         const today = { day: now.get_day_of_month(), month: now.get_month(), year: now.get_year() };
-        return new CalcPrayerTimes(today, this._settings.location, this._settings.calcAngles, this._settings.asrMethod, this._settings.highLatitudeMethod);
+        return new CalcPrayerTimes(today, this._settings.location, this._settings.calcAngles, this._settings.asrMethod, this._settings.highLatAdjustment);
     }
 
     _differenceToMinutes(microseconds) {
@@ -192,8 +192,8 @@ export default class PrayerTime extends Extension {
                 if (this._settings.isNotifyPrayer) {
                     Main.notify(this.metadata.name, text);
                 }
-                if (this._settings.isAthanPrayer) {
-                    this._player.play_from_file(this._athanFile, _("It's time for prayer"), null);
+                if (this._settings.isSoundPlayer) {
+                    this._player.play_from_file(this._soundFile, text, null);
                 }
 
                 this._menu.highlightActiveMenuItem(nextPrayer.i);
@@ -249,7 +249,7 @@ export default class PrayerTime extends Extension {
         this._prayers = null;
 
         this._player = null;
-        this._athanFile = null;
+        this._soundFile = null;
 
         this._times = null;
 
