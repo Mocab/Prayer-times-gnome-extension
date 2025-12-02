@@ -45,7 +45,7 @@ class MenuClass extends GObject.Object {
         this._menu = menu;
         this.menuItems = [];
 
-        const timeFormat = clockFormat === "12h" ? _("%l:%M %p") : (timeFormat = _("%R"));
+        const timeFormat = clockFormat === "12h" ? _("%l:%M %p") : _("%R");
 
         for (const prayer of prayers) {
             const menuItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, activate: false, hover: false });
