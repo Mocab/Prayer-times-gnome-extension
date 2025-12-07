@@ -24,10 +24,10 @@ Highly customizable and efficient prayer time and athan reminder extension for G
 -   Display:
     -   Automatic clock format detection
     -   Highlight next prayer in menu
+-   Translations: Arabic
 
 ### :hammer: TODO:
 
--   Add localisation and translation support
 -   Allow for custom time zones
 -   Add icons to notifications
 -   Add support for custom times (jamaaha) (manual preset and potentially csv)
