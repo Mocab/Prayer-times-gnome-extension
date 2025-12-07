@@ -61,7 +61,7 @@ msgstr ""
 msgid "Time for %s"
 msgstr ""
 
-# %s = prayer name, %d = minute(s) left
+# %s = prayer name, %d = minute(s) left (ngettext not needed as pref.js only allows off, 5, 10, 15)
 #: extension.js:219
 #, javascript-format
 msgid "%s in %d minutes"
@@ -130,19 +130,19 @@ msgid "Spiritual Administration of Muslims of Russia"
 msgstr ""
 
 #: prefs.js:80
-msgid "Preset angles"
+msgid "Preset methods"
 msgstr ""
 
 #: prefs.js:84
-msgid "Custom angles"
+msgid "Custom methods"
 msgstr ""
 
 #: prefs.js:87
-msgid "Fajr angle"
+msgid "Fajr method"
 msgstr ""
 
 #: prefs.js:96
-msgid "Isha angle"
+msgid "Isha method"
 msgstr ""
 
 #: prefs.js:105
