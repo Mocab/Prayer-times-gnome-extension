@@ -77,7 +77,7 @@ msgstr "التلقائي"
 # Custom location
 #: prefs.js:26 prefs.js:77
 msgid "Custom"
-msgstr "محدد"
+msgstr "محددة"
 
 #: prefs.js:29
 msgid "Latitude"
