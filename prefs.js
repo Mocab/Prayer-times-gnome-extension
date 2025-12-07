@@ -20,10 +20,10 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         page.add(locationGroup);
 
         const autoLocation = new Adw.SwitchRow({
-            title: _("Automatic location"),
+            title: _("Automatic"),
         });
         const customLocation = new Adw.ExpanderRow({
-            title: _("Custom location"),
+            title: _("Custom"),
         });
         const latitude = new Adw.SpinRow({
             title: _("Latitude"),
@@ -64,7 +64,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         page.add(calcGroup);
 
-        const presetAngles = [
+        const presetMethods = [
             { id: "mwl", name: _("Muslim World League (London)") },
             { id: "egypt", name: _("Egyptian General Authority of Survey") },
             { id: "france", name: _("Musulmans de France") },
@@ -76,11 +76,11 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             { id: "russia", name: _("Spiritual Administration of Muslims of Russia") },
             { id: "custom", name: _("Custom") },
         ];
-        const presetAngle = new Adw.ComboRow({
+        const presetMethod = new Adw.ComboRow({
             title: _("Preset angles"),
-            model: new Gtk.StringList({ strings: presetAngles.map((a) => a.name) }),
+            model: new Gtk.StringList({ strings: presetMethods.map((a) => a.name) }),
         });
-        const customAngles = new Adw.ExpanderRow({
+        const customMethod = new Adw.ExpanderRow({
             title: _("Custom angles"),
         });
         const fajrAngle = new Adw.SpinRow({
@@ -115,31 +115,31 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             { id: "angle", name: _("Angle based") },
         ];
         const highLatAdjustment = new Adw.ComboRow({
-            title: _("High latitude method"),
+            title: _("High latitude adjustment"),
             model: new Gtk.StringList({ strings: highLatAdjustments.map((h) => h.name) }),
         });
         const includeSunnah = new Adw.SwitchRow({
             title: _("Include sunnah prayers"),
         });
 
-        calcGroup.add(presetAngle);
-        calcGroup.add(customAngles);
-        customAngles.add_row(fajrAngle);
-        customAngles.add_row(ishaAngle);
+        calcGroup.add(presetMethod);
+        calcGroup.add(customMethod);
+        customMethod.add_row(fajrAngle);
+        customMethod.add_row(ishaAngle);
         calcGroup.add(asrMethod);
         calcGroup.add(highLatAdjustment);
         calcGroup.add(includeSunnah);
         gSettings.bind_with_mapping(
             "preset-angles",
-            presetAngle,
+            presetMethod,
             "selected",
             0,
             (gObject, gSetting) => {
-                gObject = presetAngles.indexOf((object) => object.id === gSetting.unpack());
+                gObject = presetMethods.indexOf((object) => object.id === gSetting.unpack());
                 return true;
             },
             (gObject) => {
-                return new Gio.GVariant("s", presetAngles[gObject].id);
+                return new Gio.GVariant("s", presetMethods[gObject].id);
             }
         );
         gSettings.bind("fajr-angle", fajrAngle, "value", 0);
@@ -171,10 +171,10 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             }
         );
         function updateAngleSensitivity() {
-            customAngles.sensitive = presetAngles[presetAngle.selected].id === "custom";
+            customMethod.sensitive = presetMethods[presetMethod.selected].id === "custom";
         }
         updateAngleSensitivity();
-        presetAngle.connect("notify::selected", updateAngleSensitivity);
+        presetMethod.connect("notify::selected", updateAngleSensitivity);
         gSettings.bind("include-sunnah", includeSunnah, "active", 0);
     }
 
