@@ -26,16 +26,16 @@ class SettingManagerClass extends GObject.Object {
             this.location.longitude = this._gSettings.get_double("longitude");
         }
         // Calculation group
-        this.calcAngles = {};
-        this.calcAngles.id = this._gSettings.get_string("preset-angles");
-        if (this.calcAngles.id === "custom") {
-            this.calcAngles.fajr = this._gSettings.get_double("fajr-angle");
-            this.calcAngles.isha = this._gSettings.get_double("isha-angle");
+        this.calcMethod = {};
+        this.calcMethod.id = this._gSettings.get_string("preset-angles");
+        if (this.calcMethod.id === "custom") {
+            this.calcMethod.fajr = this._gSettings.get_double("fajr-angle");
+            this.calcMethod.isha = this._gSettings.get_double("isha-angle");
         }
 
         this.asrMethod = this._gSettings.get_string("asr-method");
         this.highLatAdjustment = this._gSettings.get_string("high-latitude-adjustment");
-        this.includeSunnah = this._gSettings.get_boolean("include-sunnah");
+        this.isIncludeSunnah = this._gSettings.get_boolean("include-sunnah");
         // Notification group
         this.isNotifyPrayer = this._gSettings.get_boolean("notify-prayer");
         this.isSoundPlayer = this._gSettings.get_boolean("sound-player");
@@ -96,14 +96,14 @@ class SettingManagerClass extends GObject.Object {
         // Calculation group
         this._gSettingListener.presetAngles = this._gSettings.connect("changed::preset-angles", (gSetting, key) => {
             const presetAngleId = gSetting.get_string(key);
-            this.calcAngles.id = id;
+            this.calcMethod.id = id;
             if (presetAngleId === "custom") {
                 this._gSettingListener.fajrAngle = this._gSettings.connect("changed::fajr-angle", (gSetting, key) => {
-                    this.calcAngles.fajr = gSetting.get_double(key);
+                    this.calcMethod.fajr = gSetting.get_double(key);
                     this._reloadExtensionMain();
                 });
                 this._gSettingListener.ishaAngle = this._gSettings.connect("changed::isha-angle", (gSetting, key) => {
-                    this.calcAngles.isha = gSetting.get_double(key);
+                    this.calcMethod.isha = gSetting.get_double(key);
                     this._reloadExtensionMain();
                 });
             } else {
@@ -112,8 +112,8 @@ class SettingManagerClass extends GObject.Object {
                 this._gSettingListener.fajrAngle = null;
                 this._gSettingListener.ishaAngle = null;
 
-                this.calcAngles.fajr = null;
-                this.calcAngles.isha = null;
+                this.calcMethod.fajr = null;
+                this.calcMethod.isha = null;
 
                 this._reloadExtensionMain();
             }
@@ -126,8 +126,8 @@ class SettingManagerClass extends GObject.Object {
             this.highLatAdjustment = gSetting.get_string(key);
             this._reloadExtensionMain();
         });
-        this._gSettingListener.isIncludeSunnah = this._gSettings.connect("changed::include-sunnah", (gSetting, key) => {
-            this.isIncludeSunnah = gSetting.get_string(key);
+        this._gSettingListener.isisI = this._gSettings.connect("changed::include-sunnah", (gSetting, key) => {
+            this.isisI = gSetting.get_string(key);
             this._reloadExtensionMain();
         });
         // Notification group

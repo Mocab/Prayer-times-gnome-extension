@@ -11,7 +11,7 @@ export class CalcPrayerTimes {
     #timeEq;
     #midDayTime;
 
-    constructor(today, location, calcAngles, asrMethod, highLatAdjustment) {
+    constructor(today, location, calcMethod, asrMethod, highLatAdjustment) {
         // Global values
         this.#today = today;
         this.#location = location;
@@ -20,7 +20,7 @@ export class CalcPrayerTimes {
 
         const timeFromMidnight = {};
 
-        const { fajr: fajrAngle, isha: ishaAngle } = this.#calcAngles(calcAngles);
+        const { fajr: fajrAngle, isha: ishaAngle } = this.#calcMethod(calcMethod);
 
         const sunHorizonAngle = 0.833; // The specific angle the middle of the sun is below the horizon
         timeFromMidnight.fajr = this.#angleBelowHorizonTime(fajrAngle, -1);
@@ -30,7 +30,7 @@ export class CalcPrayerTimes {
         timeFromMidnight.asr = this.#angleBelowHorizonTime(this.#asrAngle(asrMethod));
         const sunsetTime = this.#angleBelowHorizonTime(sunHorizonAngle);
         timeFromMidnight.maghrib = sunsetTime + 0.017; // ~1 minute after sunset
-        if (calcAngles.id === "makkah") {
+        if (calcMethod.id === "makkah") {
             // Umm al-Qura
             timeFromMidnight.isha = timeFromMidnight.maghrib + 1.5;
         } else {
@@ -59,7 +59,7 @@ export class CalcPrayerTimes {
         this.#timeEq = q / 15 - ra;
     }
 
-    #calcAngles(calcAngles) {
+    #calcMethod(calcMethod) {
         const presetAngles = {
             mwl: { fajr: 18, isha: 17 },
             egypt: { fajr: 19.5, isha: 17.5 },
@@ -71,7 +71,7 @@ export class CalcPrayerTimes {
             malaysia: { fajr: 18, isha: 18 },
             russia: { fajr: 16, isha: 15 },
         };
-        return presetAngles[calcAngles.id] ?? { fajr: calcAngles.fajr, isha: calcAngles.isha };
+        return presetAngles[calcMethod.id] ?? { fajr: calcMethod.fajr, isha: calcMethod.isha };
     }
 
     // Time when sun reaches a specific angle below horizon
