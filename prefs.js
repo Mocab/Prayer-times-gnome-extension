@@ -77,14 +77,14 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             { id: "custom", name: _("Custom") },
         ];
         const presetMethod = new Adw.ComboRow({
-            title: _("Preset angles"),
+            title: _("Preset methods"),
             model: new Gtk.StringList({ strings: presetMethods.map((a) => a.name) }),
         });
         const customMethod = new Adw.ExpanderRow({
-            title: _("Custom angles"),
+            title: _("Custom methods"),
         });
         const fajrAngle = new Adw.SpinRow({
-            title: _("Fajr angle"),
+            title: _("Fajr method"),
             digits: 1,
             adjustment: new Gtk.Adjustment({
                 lower: 0,
@@ -93,7 +93,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             }),
         });
         const ishaAngle = new Adw.SpinRow({
-            title: _("Isha angle"),
+            title: _("Isha method"),
             digits: 1,
             adjustment: new Gtk.Adjustment({
                 lower: 0,
@@ -130,7 +130,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         calcGroup.add(highLatAdjustment);
         calcGroup.add(includeSunnah);
         gSettings.bind_with_mapping(
-            "preset-angles",
+            "preset-methods",
             presetMethod,
             "selected",
             0,
@@ -142,8 +142,8 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 return new Gio.GVariant("s", presetMethods[gObject].id);
             }
         );
-        gSettings.bind("fajr-angle", fajrAngle, "value", 0);
-        gSettings.bind("isha-angle", ishaAngle, "value", 0);
+        gSettings.bind("fajr-method", fajrAngle, "value", 0);
+        gSettings.bind("isha-method", ishaAngle, "value", 0);
         gSettings.bind_with_mapping(
             "asr-method",
             asrMethod,

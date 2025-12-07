@@ -27,10 +27,10 @@ class SettingManagerClass extends GObject.Object {
         }
         // Calculation group
         this.calcMethod = {};
-        this.calcMethod.id = this._gSettings.get_string("preset-angles");
+        this.calcMethod.id = this._gSettings.get_string("preset-methods");
         if (this.calcMethod.id === "custom") {
-            this.calcMethod.fajr = this._gSettings.get_double("fajr-angle");
-            this.calcMethod.isha = this._gSettings.get_double("isha-angle");
+            this.calcMethod.fajr = this._gSettings.get_double("fajr-method");
+            this.calcMethod.isha = this._gSettings.get_double("isha-method");
         }
 
         this.asrMethod = this._gSettings.get_string("asr-method");
@@ -94,23 +94,23 @@ class SettingManagerClass extends GObject.Object {
             }
         });
         // Calculation group
-        this._gSettingListener.presetAngles = this._gSettings.connect("changed::preset-angles", (gSetting, key) => {
+        this._gSettingListener.presetAngles = this._gSettings.connect("changed::preset-methods", (gSetting, key) => {
             const presetAngleId = gSetting.get_string(key);
             this.calcMethod.id = id;
             if (presetAngleId === "custom") {
-                this._gSettingListener.fajrAngle = this._gSettings.connect("changed::fajr-angle", (gSetting, key) => {
+                this._gSettingListener.fajrMethod = this._gSettings.connect("changed::fajr-method", (gSetting, key) => {
                     this.calcMethod.fajr = gSetting.get_double(key);
                     this._reloadExtensionMain();
                 });
-                this._gSettingListener.ishaAngle = this._gSettings.connect("changed::isha-angle", (gSetting, key) => {
+                this._gSettingListener.ishaMethod = this._gSettings.connect("changed::isha-method", (gSetting, key) => {
                     this.calcMethod.isha = gSetting.get_double(key);
                     this._reloadExtensionMain();
                 });
             } else {
-                this._gSettings.disconnect(this._gSettingListener.fajrAngle);
-                this._gSettings.disconnect(this._gSettingListener.ishaAngle);
-                this._gSettingListener.fajrAngle = null;
-                this._gSettingListener.ishaAngle = null;
+                this._gSettings.disconnect(this._gSettingListener.fajrMethod);
+                this._gSettings.disconnect(this._gSettingListener.ishaMethod);
+                this._gSettingListener.fajrMethod = null;
+                this._gSettingListener.ishaMethod = null;
 
                 this.calcMethod.fajr = null;
                 this.calcMethod.isha = null;
