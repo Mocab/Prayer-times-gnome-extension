@@ -117,7 +117,8 @@ export default class PrayerTime extends Extension {
         }
 
         const today = { day: now.get_day_of_month(), month: now.get_month(), year: now.get_year() };
-        return new CalcPrayerTimes(today, this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+        const timezone = now.get_timezone();
+        return new CalcPrayerTimes(today, timezone, this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
     }
 
     _differenceToMinutes(microseconds) {

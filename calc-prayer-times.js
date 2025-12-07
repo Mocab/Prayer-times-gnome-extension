@@ -5,45 +5,44 @@
 import GLib from "gi://GLib";
 
 export class CalcPrayerTimes {
-    #today;
     #location;
     #sunDecl;
     #timeEq;
     #midDayTime;
 
-    constructor(today, location, calcMethod, asrMethod, highLatAdjustment) {
+    constructor(today, timezone, location, calcMethod, asrMethod, highLatAdjustment) {
         // Global values
-        this.#today = today;
         this.#location = location;
-        this.#sunPos(GLib.Date.new_dmy(this.#today.day, this.#today.month, this.#today.year).get_julian() + 1721425); // Add offset between Jan 1, 0001 AD (Glib julians) and Jan 1, 4713 BC (actual julian beginning)
+        this.#sunPos(GLib.Date.new_dmy(today.day, today.month, today.year).get_julian() + 1721425); // Add offset between Jan 1, 0001 AD (Glib julians) and Jan 1, 4713 BC (actual julian beginning)
         this.#midDayTime = this.#mod(12 - this.#timeEq, 24);
 
-        const timeFromMidnight = {};
+        const astronomicalHours = {};
 
         const { fajr: fajrAngle, isha: ishaAngle } = this.#calcMethod(calcMethod);
 
         const sunHorizonAngle = 0.833; // The specific angle the middle of the sun is below the horizon
-        timeFromMidnight.fajr = this.#angleBelowHorizonTime(fajrAngle, -1);
+        astronomicalHours.fajr = this.#angleBelowHorizonTime(fajrAngle, -1);
         const sunriseTime = this.#angleBelowHorizonTime(sunHorizonAngle, -1);
-        timeFromMidnight.duha = sunriseTime + 0.25; // 15 min after sunrise
-        timeFromMidnight.thuhr = this.#midDayTime;
-        timeFromMidnight.asr = this.#angleBelowHorizonTime(this.#asrAngle(asrMethod));
+        astronomicalHours.duha = sunriseTime + 0.25; // 15 min after sunrise
+        astronomicalHours.thuhr = this.#midDayTime;
+        astronomicalHours.asr = this.#angleBelowHorizonTime(this.#asrAngle(asrMethod));
         const sunsetTime = this.#angleBelowHorizonTime(sunHorizonAngle);
-        timeFromMidnight.maghrib = sunsetTime + 0.017; // ~1 minute after sunset
+        astronomicalHours.maghrib = sunsetTime + 0.017; // ~1 minute after sunset
         if (calcMethod.id === "makkah") {
             // Umm al-Qura
-            timeFromMidnight.isha = timeFromMidnight.maghrib + 1.5;
+            astronomicalHours.isha = astronomicalHours.maghrib + 1.5;
         } else {
-            timeFromMidnight.isha = this.#angleBelowHorizonTime(ishaAngle);
+            astronomicalHours.isha = this.#angleBelowHorizonTime(ishaAngle);
         }
 
         const nightLen = sunriseTime + 24 - sunsetTime;
-        timeFromMidnight.fajr = this.#adjustHighLat(highLatAdjustment, timeFromMidnight.fajr, fajrAngle, sunriseTime, nightLen, -1);
-        timeFromMidnight.isha = this.#adjustHighLat(highLatAdjustment, timeFromMidnight.isha, ishaAngle, sunsetTime, nightLen);
+        astronomicalHours.fajr = this.#adjustHighLat(highLatAdjustment, astronomicalHours.fajr, fajrAngle, sunriseTime, nightLen, -1);
+        astronomicalHours.isha = this.#adjustHighLat(highLatAdjustment, astronomicalHours.isha, ishaAngle, sunsetTime, nightLen);
 
         // Store final values in this instance
-        Object.entries(timeFromMidnight).forEach(([key, value]) => {
-            this[key] = this.#convertTime(value);
+        const utcMidnight = GLib.DateTime.new_utc(today.year, today.month, today.day, 0, 0, 0.0);
+        Object.entries(astronomicalHours).forEach(([key, value]) => {
+            this[key] = this.#astronomicalToTime(value, utcMidnight, timezone);
         });
     }
 
@@ -104,10 +103,9 @@ export class CalcPrayerTimes {
         return time;
     }
 
-    #convertTime(astronomicalHours) {
+    #astronomicalToTime(astronomicalHours, utcMidnight, timezone) {
         const hours = astronomicalHours - this.#location.longitude / 15;
-        const midnight = GLib.DateTime.new_local(this.#today.year, this.#today.month, this.#today.day, 0, 0, 0.0);
-        return midnight.add_minutes(Math.round(hours * 60));
+        return utcMidnight.add_minutes(Math.round(hours * 60)).to_timezone(timezone);
     }
 
     // Math helpers

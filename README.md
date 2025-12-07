@@ -36,6 +36,7 @@ Highly customizable and efficient prayer time and athan reminder extension for G
 -   Add dialogs as a notification option
 -   Move to TypeScript
 -   Enforce Eslint
+-   Reload extension when gnome settings timezone is changed
 
 ## :handshake: Contribution
 
