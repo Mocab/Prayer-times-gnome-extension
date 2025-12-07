@@ -59,23 +59,25 @@ msgstr "العشاء"
 msgid "Time for %s"
 msgstr "%s وقت صلاة"
 
-# %s = prayer name, %d = minute(s) left
+# %s = prayer name, %d = minute(s) left (ngettext not needed as pref.js only allows off, 5, 10, 15)
 #: extension.js:219
 #, javascript-format
 msgid "%s in %d minutes"
-msgstr "دقيقة %d في %s صلاة"
+msgstr "دقائق %d في %s صلاة"
 
 #: prefs.js:18
 msgid "Location"
 msgstr "المكان"
 
+# Automatic location
 #: prefs.js:23
-msgid "Automatic location"
-msgstr "مكان تلقائي"
+msgid "Automatic"
+msgstr "التلقائي"
 
-#: prefs.js:26
-msgid "Custom location"
-msgstr "مكان محددة"
+# Custom location
+#: prefs.js:26 prefs.js:77
+msgid "Custom"
+msgstr "محدد"
 
 #: prefs.js:29
 msgid "Latitude"
@@ -87,7 +89,7 @@ msgstr "زاوية الطول"
 
 #: prefs.js:63
 msgid "Calculations"
-msgstr "المحاسبات"
+msgstr "الحسابات"
 
 #: prefs.js:68
 msgid "Muslim World League (London)"
@@ -103,7 +105,7 @@ msgstr "مسلمون فرنسا"
 
 #: prefs.js:71
 msgid "Islamic Society of North America"
-msgstr "الجمعية الإسلامية لأمريكا الشمالية"
+msgstr "جمعية أمريكا الشمالية الإسلامية"
 
 #: prefs.js:72
 msgid "Uni of Islamic Sciences (Karachi)"
@@ -125,25 +127,21 @@ msgstr "وزارة التنمية الإسلامية الماليزية"
 msgid "Spiritual Administration of Muslims of Russia"
 msgstr "الإدارة الروحية للمسلمين في روسيا"
 
-#: prefs.js:77
-msgid "Custom"
-msgstr "محددة"
-
 #: prefs.js:80
-msgid "Preset angles"
-msgstr "الزاوية المحددة"
+msgid "Preset methods"
+msgstr "الطرق المحددة مسبقاً"
 
 #: prefs.js:84
-msgid "Custom angles"
-msgstr "حدد الزاوية"
+msgid "Custom methods"
+msgstr "حدد طريقة خاص"
 
 #: prefs.js:87
-msgid "Fajr angle"
-msgstr "زاوية الفجر"
+msgid "Fajr method"
+msgstr "طريقة الفجر"
 
 #: prefs.js:96
-msgid "Isha angle"
-msgstr "زاوية العشاء"
+msgid "Isha method"
+msgstr "طريقة العشاء"
 
 #: prefs.js:105
 msgid "Hanbali, Maliki, Shafi"
@@ -151,11 +149,11 @@ msgstr "حنبلي، مالكي، شافعي"
 
 #: prefs.js:106
 msgid "Hanafi"
-msgstr "حنافي"
+msgstr "حنفي"
 
 #: prefs.js:109
 msgid "Asr shadow method"
-msgstr "نظام الظل العصر"
+msgstr "نظام ظل العصر"
 
 #: prefs.js:113
 msgid "Middle of night"
@@ -167,11 +165,11 @@ msgstr "سُبع الليل"
 
 #: prefs.js:115
 msgid "Angle based"
-msgstr "الزاوية"
+msgstr "بحسب الزاوية"
 
 #: prefs.js:118
 msgid "High latitude adjustment"
-msgstr "تعديل درجة العرض العالية"
+msgstr "تعديل لدرجة العرض العالية"
 
 #: prefs.js:122
 msgid "Include sunnah prayers"
@@ -187,7 +185,7 @@ msgstr "إرسل تذكيرات"
 
 #: prefs.js:191
 msgid "Play a sound for prayers"
-msgstr "شغل صوت للتذكير"
+msgstr "شغل الصوت للتذكيرات"
 
 #: prefs.js:194
 msgid "Off"
@@ -199,11 +197,11 @@ msgstr "٥ دقائق"
 
 #: prefs.js:196
 msgid "10 minutes"
-msgstr "١٠ دقيقة"
+msgstr "١٠ دقائق"
 
 #: prefs.js:197
 msgid "15 minutes"
-msgstr "١٥ دقيقة"
+msgstr "١٥ دقائق"
 
 #: prefs.js:200
 msgid "Notify before prayer"
@@ -213,4 +211,4 @@ msgstr "ذكر قبل الصلاة"
 #: setting-manager.js:61
 #, javascript-format
 msgid "Failed to connect to Geoclue, defaulting to manual location: %s"
-msgstr "%s :فشل الحصول على المكان التلقائي، سيتم التبديل إلى  المكان المحددة"
+msgstr "لقد فشل الحصول على المكان التلقائي، سيتم التبديل إلى المكان المحدد: s%"
