@@ -19,22 +19,22 @@
             <description>Custom longitude (earth x axis)</description>
         </key>
 
-        <key name="preset-angles" type="s">
-            <summary>Preset angles</summary>
+        <key name="preset-methods" type="s">
+            <summary>Preset methods</summary>
             <default>'mwl'</default>
-            <description>Preset Fajr and Isha calculation angles</description>
+            <description>Preset Fajr and Isha calculation methods</description>
         </key>
-        <key name="fajr-angle" type="d">
-            <summary>Fajr angle</summary>
+        <key name="fajr-method" type="d">
+            <summary>Fajr method</summary>
             <default>18</default>
             <range min="0" max="20"/>
-            <description>Set a custom Fajr calculation angle</description>
+            <description>Set a custom Fajr calculation method</description>
         </key>
-        <key name="isha-angle" type="d">
-            <summary>Isha angle</summary>
+        <key name="isha-method" type="d">
+            <summary>Isha method</summary>
             <default>17</default>
             <range min="0" max="20"/>
-            <description>Set a custom Isha calculation angle</description>
+            <description>Set a custom Isha calculation method</description>
         </key>
         <key name="asr-method" type="s">
             <summary>Asr shadow method</summary>
