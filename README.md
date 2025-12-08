@@ -38,9 +38,15 @@ Highly customizable and efficient prayer time and athan reminder extension for G
 -   Enforce Eslint
 -   Reload extension when gnome settings timezone is changed
 
-## :handshake: Contribution
+## :handshake: Contribution:
 
 As always any contributions are very welcome, this project is lilah and will inshAllah be counted as a charity. Before making any major changes or adding big features please create a pull request detailing everything. Furthermore, any major use of AI must be declared and the code from this repo must not be used to train them.
+
+### :hammer: Building:
+
+`make pack`: generates/builds the extension.zip.
+`make install`: installs the generated extension pack locally.
+`make clean`: cleans files generated when building (including the extension.zip).
 
 ### :trophy: Credits:
 
