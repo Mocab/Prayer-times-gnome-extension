@@ -44,8 +44,8 @@ As always any contributions are very welcome, this project is lilah and will ins
 
 ### :hammer: Building:
 
-`make pack`: generates/builds the extension.zip.
-`make install`: installs the generated extension pack locally.
+`make pack`: generates/builds the extension.zip.<br>
+`make install`: installs the generated extension pack locally.<br>
 `make clean`: cleans files generated when building (including the extension.zip).
 
 ### :trophy: Credits:
