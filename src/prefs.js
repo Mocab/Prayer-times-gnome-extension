@@ -1,5 +1,6 @@
 import Adw from "gi://Adw";
 import Gtk from "gi://Gtk";
+import GLib from "gi://GLib";
 import { ExtensionPreferences, gettext as _ } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
 export default class PrayerTimePreferences extends ExtensionPreferences {
@@ -129,47 +130,44 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         calcGroup.add(asrMethod);
         calcGroup.add(highLatAdjustment);
         calcGroup.add(includeSunnah);
-        gSettings.bind_with_mapping(
+        // Use .connect for all combo rows instead of bind_with_mapping, see: https://gitlab.gnome.org/GNOME/gjs/-/issues/397
+        function presetMethodGSettingToUi() {
+            presetMethod.selected = presetMethods.findIndex((object) => object.id === gSettings.get_string("preset-methods"));
+        }
+        presetMethodGSettingToUi();
+        gSettings.connect("changed::preset-methods", presetMethodGSettingToUi);
+        presetMethod.connect("notify::selected", () => gSettings.set_string("preset-methods", presetMethods[presetMethod.selected].id));
+        /* gSettings.bind_with_mapping(
             "preset-methods",
             presetMethod,
             "selected",
             0,
             (gObject, gSetting) => {
-                gObject = presetMethods.indexOf((object) => object.id === gSetting.unpack());
-                return true;
+                const foundI = presetMethods.findIndex((object) => object.id === gSetting.unpack());
+                if (foundI !== -1) {
+                    gObject = foundI;
+                    return true;
+                }
+                return false;
             },
             (gObject) => {
-                return new Gio.GVariant("s", presetMethods[gObject].id);
+                return GLib.Variant.new_string(presetMethods[gObject].id);
             }
-        );
+        ); */
         gSettings.bind("fajr-method", fajrAngle, "value", 0);
         gSettings.bind("isha-method", ishaAngle, "value", 0);
-        gSettings.bind_with_mapping(
-            "asr-method",
-            asrMethod,
-            "selected",
-            0,
-            (gObject, gSetting) => {
-                gObject = asrMethods.indexOf((object) => object.id === gSetting.unpack());
-                return true;
-            },
-            (gObject) => {
-                return new Gio.GVariant("s", asrMethods[gObject].id);
-            }
-        );
-        gSettings.bind_with_mapping(
-            "high-latitude-adjustment",
-            highLatAdjustment,
-            "selected",
-            0,
-            (gObject, gSetting) => {
-                gObject = highLatAdjustments.indexOf((object) => object.id === gSetting.unpack());
-                return true;
-            },
-            (gObject) => {
-                return new Gio.GVariant("s", highLatAdjustments[gObject].id);
-            }
-        );
+        function asrMethodGSettingToUi() {
+            asrMethod.selected = asrMethods.findIndex((object) => object.id === gSettings.get_string("asr-method"));
+        }
+        asrMethodGSettingToUi();
+        gSettings.connect("changed::asr-method", asrMethodGSettingToUi);
+        asrMethod.connect("notify::selected", () => gSettings.set_string("asr-method", asrMethods[asrMethod.selected].id));
+        function highLatAdjustmentGSettingToUi() {
+            highLatAdjustment.selected = highLatAdjustments.findIndex((object) => object.id === gSettings.get_string("high-latitude-adjustment"));
+        }
+        highLatAdjustmentGSettingToUi();
+        gSettings.connect("changed::high-latitude-adjustment", highLatAdjustmentGSettingToUi);
+        highLatAdjustment.connect("notify::selected", () => gSettings.set_string("high-latitude-adjustment", highLatAdjustments[highLatAdjustment.selected].id));
         function updateAngleSensitivity() {
             customMethod.sensitive = presetMethods[presetMethod.selected].id === "custom";
         }
@@ -191,10 +189,10 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             title: _("Play a sound for prayers"),
         });
         const reminderTimes = [
-            { length: 0, name: _("Off") },
-            { length: 5, name: _("5 minutes") },
-            { length: 10, name: _("10 minutes") },
-            { length: 15, name: _("15 minutes") },
+            { value: 0, name: _("Off") },
+            { value: 5, name: _("5 minutes") },
+            { value: 10, name: _("10 minutes") },
+            { value: 15, name: _("15 minutes") },
         ];
         const reminderTime = new Adw.ComboRow({
             title: _("Notify before prayer"),
@@ -206,18 +204,11 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         notificationGroup.add(reminderTime);
         gSettings.bind("notify-prayer", notifyPrayer, "active", 0);
         gSettings.bind("sound-player", soundPlayer, "active", 0);
-        gSettings.bind_with_mapping(
-            "reminder",
-            reminderTime,
-            "selected",
-            0,
-            (gObject, gSetting) => {
-                gObject = reminderTimes.indexOf((object) => object.length === gSetting.unpack());
-                return true;
-            },
-            (gObject) => {
-                return new Gio.GVariant("i", reminderTimes[gObject].length);
-            }
-        );
+        function reminderGSettingToUi() {
+            reminderTime.selected = reminderTimes.findIndex((object) => object.value === gSettings.get_int("reminder"));
+        }
+        reminderGSettingToUi();
+        gSettings.connect("changed::reminder", reminderGSettingToUi);
+        reminderTime.connect("notify::selected", () => gSettings.set_int("reminder", reminderTimes[reminderTime.selected].value));
     }
 }
