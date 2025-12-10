@@ -1,10 +1,11 @@
-UUID=prayertimes@mocab
+PACK_NAME=prayertimes@mocab.shell-extension
 
-.PHONY: all pack install clean
+.PHONY: all pack install run clean dev
 
 all: pack
 
-$(UUID).zip:
+$(PACK_NAME).zip:
+	@echo "Creating & packing $(PACK_NAME).zip"
 	@gnome-extensions pack src \
 	    --force \
 	    --podir="../po" \
@@ -13,10 +14,15 @@ $(UUID).zip:
 		--extra-source="../assets" \
 	    --extra-source="../CHANGELOG.md"
 
-pack: $(UUID).zip
+pack: $(PACK_NAME).zip
 
-install: $(UUID).zip
-	gnome-extensions install --force $(UUID).shell-extension.zip
+install: $(PACK_NAME).zip
+	@echo "Installing $(PACK_NAME)"
+	@gnome-extensions install --force $(PACK_NAME).zip
 
 clean:
-	@rm -rf $(UUID).zip
+	@echo "Deleting $(PACK_NAME).zip"
+	@rm -rf $(PACK_NAME).zip
+
+dev: clean install
+	dbus-run-session -- gnome-shell --nested --wayland
