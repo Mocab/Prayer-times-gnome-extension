@@ -175,7 +175,6 @@ export default class PrayerTime extends Extension {
         let midnight = GLib.DateTime.new_local(now.get_year(), now.get_month(), now.get_day_of_month(), 0, 0, 0.0);
         this._times = this._getDatePrayerTimes(now, midnight);
         let nextPrayer = this._getNextPrayer(now, midnight);
-
         nextPrayer.name = this._prayers[nextPrayer.i].name;
         // No longer needed for now
         now = null;
@@ -199,7 +198,7 @@ export default class PrayerTime extends Extension {
 
                 // If last prayer move to next day
                 const now = GLib.DateTime.new_now_local();
-                if (nextPrayer.i === prayers.length - 1) {
+                if (nextPrayer.i === this._prayers.length - 1) {
                     const midnight = GLib.DateTime.new_now_local(now.get_year(), now.get_month(), now.get_day_of_month(), 0, 0, 0.0);
                     if (midnight.compare(now) === -1) {
                         this._times = this._getDatePrayerTimes(now.add_days(1), midnight);
@@ -215,7 +214,7 @@ export default class PrayerTime extends Extension {
                     this._menu.highlightMenuItem(nextPrayer.i);
                 }
                 nextPrayer.name = this._prayers[nextPrayer.i].name;
-                nextPrayer.timeLeft = this._differenceToMinutes(this._times[this._prayers[nextPrayer.i]].difference(now));
+                nextPrayer.timeLeft = this._differenceToMinutes(this._times[this._prayers[nextPrayer.i].id].difference(now));
             } else if (this._settings.reminder && nextPrayer.timeLeft === this._settings.reminder) {
                 const text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder); // Values are 0, 5, 15, 15 so ngettext not needed
 
