@@ -43,7 +43,7 @@ class MenuClass extends GObject.Object {
     _init(prayers, times, nextPrayerI, extensionPath, clockFormat, menu) {
         super._init();
         this._menu = menu;
-        this.menuItems = [];
+        this._menuItems = [];
 
         const timeFormat = clockFormat === "12h" ? _("%l:%M %p") : _("%R");
 
@@ -70,7 +70,7 @@ class MenuClass extends GObject.Object {
             );
 
             menu.addMenuItem(menuItem);
-            this.menuItems.push(menuItem);
+            this._menuItems.push(menuItem);
         }
 
         this.highlightMenuItem(nextPrayerI);
@@ -78,14 +78,14 @@ class MenuClass extends GObject.Object {
 
     highlightMenuItem(i) {
         if (i > 0) {
-            this.menuItems[i - 1].remove_style_class_name("active");
+            this._menuItems[i - 1].remove_style_class_name("active");
         }
-        this.menuItems[i].add_style_class_name("active");
+        this._menuItems[i].add_style_class_name("active");
     }
 
     destroy() {
-        this.menuItems = null;
-        this._menu.removeAll();
+        this._menuItems = null;
+        this._menu.destroy();
         this._menu = null;
     }
 }
