@@ -176,15 +176,12 @@ export default class PrayerTime extends Extension {
         this._times = this._getDatePrayerTimes(now, midnight);
         let nextPrayer = this._getNextPrayer(now, midnight);
         nextPrayer.name = this._prayers[nextPrayer.i].name;
-        // No longer needed for now
-        now = null;
-        midnight = null;
 
         this._indicator.setTimeLeftText(nextPrayer.name, nextPrayer.timeLeft);
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 60, () => {
             nextPrayer.timeLeft--;
 
-            if (nextPrayer.timeLeft === 0) {
+            if (nextPrayer.timeLeft <= 0) {
                 const text = _("Time for %s").format(nextPrayer.name);
 
                 this._indicator.setText(text);
@@ -197,9 +194,9 @@ export default class PrayerTime extends Extension {
                 }
 
                 // If last prayer move to next day
-                const now = GLib.DateTime.new_now_local();
+                now = GLib.DateTime.new_now_local();
                 if (nextPrayer.i === this._prayers.length - 1) {
-                    const midnight = GLib.DateTime.new_now_local(now.get_year(), now.get_month(), now.get_day_of_month(), 0, 0, 0.0);
+                    midnight = GLib.DateTime.new_local(now.get_year(), now.get_month(), now.get_day_of_month(), 0, 0, 0.0);
                     if (midnight.compare(now) === -1) {
                         this._times = this._getDatePrayerTimes(now.add_days(1), midnight);
                     } else {
