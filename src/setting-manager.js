@@ -126,8 +126,8 @@ class SettingManagerClass extends GObject.Object {
             this.highLatAdjustment = gSetting.get_string(key);
             this._reloadExtensionMain();
         });
-        this._gSettingListener.isisI = this._gSettings.connect("changed::include-sunnah", (gSetting, key) => {
-            this.isisI = gSetting.get_string(key);
+        this._gSettingListener.isIncludeSunnah = this._gSettings.connect("changed::include-sunnah", (gSetting, key) => {
+            this.isIncludeSunnah = gSetting.get_string(key);
             this._reloadExtensionMain();
         });
         // Notification group
