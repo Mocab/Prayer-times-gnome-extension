@@ -227,28 +227,29 @@ export default class PrayerTime extends Extension {
 
     // For setting changes
     _reloadMain() {
-        GLib.Source.remove(this._timeoutId);
-        this._timeoutId = null;
+        if (this._timeoutId) {
+            GLib.Source.remove(this._timeoutId);
+            this._timeoutId = null;
+        }
         this._menu.removeAll();
         this._main();
     }
 
     disable() {
-        GLib.Source.remove(this._timeoutId);
-        this._timeoutId = null;
-        this._prayers = null;
+        if (this._timeoutId) {
+            GLib.Source.remove(this._timeoutId);
+            this._timeoutId = null;
+        }
 
-        this._player = null;
-        this._soundFile = null;
-
-        this._times = null;
-
-        this._menu.destroy();
-        this._indicator.destroy();
-        this._indicator = null;
+        if (this._indicator) {
+            this._indicator.destroy();
+            this._indicator = null;
+        }
         this._menu = null;
 
-        this._settings.destroy();
-        this._settings = null;
+        if (this._settings) {
+            this._settings.destroy();
+            this._settings = null;
+        }
     }
 }
