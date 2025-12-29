@@ -12,42 +12,23 @@ import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import { SettingManager } from "./setting-manager.js";
 import { CalcPrayerTimes } from "./calc-prayer-times.js";
 
-class IndicatorClass extends PanelMenu.Button {
-    _init(extensionName, extensionPath) {
-        super._init(0.5, extensionName);
-        this.indicatorText = new St.Label({
-            text: "...",
-            y_align: Clutter.ActorAlign.CENTER,
-            style: "padding: 0px 12px;", // Inline to avoid it being overridden by other extensions that collapse padding
-        });
-        this.add_child(this.indicatorText);
+class Menu extends PopupMenu.PopupMenu {
+    static iconsPath = "";
 
-        this._iconsPath = extensionPath + "/assets/icons";
+    constructor(sourceActor, arrowAlignment, arrowSide, extensionPath) {
+        super(sourceActor, arrowAlignment, arrowSide);
+        Menu.iconsPath = extensionPath + "/assets/icons";
     }
 
-    // For readability
-    setText(text) {
-        this.indicatorText.set_text(text);
-    }
-
-    setTimeLeftText(nextName, minutesToNext) {
-        const hh = Math.floor(minutesToNext / 60)
-            .toString()
-            .padStart(2, "0");
-        const mm = (minutesToNext % 60).toString().padStart(2, "0");
-        this.indicatorText.set_text(`${nextName} - ${hh}:${mm}`);
-    }
-
-    populateMenu(prayers, times, nextPrayerI, clockFormat) {
+    populate(prayers, times, clockFormat) {
         const timeFormat = clockFormat === "12h" ? _("%l:%M %p") : _("%R");
 
-        this._menuItems = [];
         for (const prayer of prayers) {
             const menuItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, activate: false, hover: false });
 
             menuItem.add_child(
                 new St.Icon({
-                    gicon: Gio.icon_new_for_string(`${this._iconsPath}/${prayer.id}.svg`),
+                    gicon: Gio.icon_new_for_string(Menu.iconsPath + "/" + prayer.id + ".svg"),
                     icon_size: 20,
                 })
             );
@@ -64,22 +45,41 @@ class IndicatorClass extends PanelMenu.Button {
                 })
             );
 
-            this.menu.addMenuItem(menuItem);
-            this._menuItems.push(menuItem);
+            this.addMenuItem(menuItem);
         }
-
-        this.highlightMenuItem(nextPrayerI);
     }
 
-    highlightMenuItem(i) {
+    highlightItem(i) {
+        const items = this._getMenuItems();
         if (i > 0) {
-            this._menuItems[i - 1].remove_style_class_name("active");
+            items[i - 1].remove_style_class_name("active");
         }
-        this._menuItems[i].add_style_class_name("active");
+        items[i].add_style_class_name("active");
+    }
+}
+
+class IndicatorClass extends PanelMenu.Button {
+    _init(extensionName) {
+        super._init(0.5, extensionName, true); // 0.5 == middle of topPanel. true to disable automatic menu creation
+        this.indicatorText = new St.Label({
+            text: "...",
+            y_align: Clutter.ActorAlign.CENTER,
+            style: "padding: 0px 12px;", // Inline to avoid it being overridden by extensions that collapse padding
+        });
+        this.add_child(this.indicatorText);
     }
 
-    destroyMenuItems() {
-        this.menu.removeAll();
+    // For readability
+    setText(text) {
+        this.indicatorText.set_text(text);
+    }
+
+    setTimeLeftText(nextName, minutesToNext) {
+        const hh = Math.floor(minutesToNext / 60)
+            .toString()
+            .padStart(2, "0");
+        const mm = (minutesToNext % 60).toString().padStart(2, "0");
+        this.indicatorText.set_text(`${nextName} - ${hh}:${mm}`);
     }
 }
 const Indicator = GObject.registerClass(IndicatorClass);
@@ -92,7 +92,9 @@ export default class PrayerTime extends Extension {
     enable() {
         this._settings = new SettingManager(this);
 
-        this._indicator = new Indicator(this.metadata.name, this.path);
+        this._indicator = new Indicator(this.metadata.name);
+        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path);
+        this._indicator.setMenu(this._menu);
         Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
 
         this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
@@ -197,12 +199,12 @@ export default class PrayerTime extends Extension {
                     }
                     nextPrayer.i = 0;
 
-                    this._indicator.destroyMenuItems();
-                    this._indicator.populateMenu(this._prayers, this._times, nextPrayer.i, this._settings.clockFormat);
+                    this._menu.removeAll();
+                    this._menu.populate(this._prayers, this._times, this._settings.clockFormat);
                 } else {
                     nextPrayer.i++;
-                    this._indicator.highlightMenuItem(nextPrayer.i);
                 }
+                this._menu.highlightItem(nextPrayer.i);
                 nextPrayer.name = this._prayers[nextPrayer.i].name;
                 nextPrayer.timeLeft = this._differenceToMinutes(this._times[this._prayers[nextPrayer.i].id].difference(now));
             } else if (this._settings.reminder && nextPrayer.timeLeft === this._settings.reminder) {
@@ -219,14 +221,15 @@ export default class PrayerTime extends Extension {
             return GLib.SOURCE_CONTINUE;
         });
 
-        this._indicator.populateMenu(this._prayers, this._times, nextPrayer.i, this._settings.clockFormat);
+        this._menu.populate(this._prayers, this._times, this._settings.clockFormat);
+        this._menu.highlightItem(nextPrayer.i);
     }
 
     // For setting changes
     _reloadMain() {
         GLib.Source.remove(this._timeoutId);
         this._timeoutId = null;
-        this._indicator.destroyMenuItems();
+        this._menu.removeAll();
         this._main();
     }
 
@@ -240,8 +243,10 @@ export default class PrayerTime extends Extension {
 
         this._times = null;
 
+        this._menu.destroy();
         this._indicator.destroy();
         this._indicator = null;
+        this._menu = null;
 
         this._settings.destroy();
         this._settings = null;
