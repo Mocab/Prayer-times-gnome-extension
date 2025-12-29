@@ -13,9 +13,7 @@ import { SettingManager } from "./setting-manager.js";
 import { CalcPrayerTimes } from "./calc-prayer-times.js";
 
 class IndicatorClass extends PanelMenu.Button {
-    _init(extensionName, settings) {
-        this._settings = settings;
-
+    _init(extensionName, extensionPath) {
         super._init(0.5, extensionName);
         this.indicatorText = new St.Label({
             text: "...",
@@ -23,8 +21,11 @@ class IndicatorClass extends PanelMenu.Button {
             style: "padding: 0px 12px;", // Inline to avoid it being overridden by other extensions that collapse padding
         });
         this.add_child(this.indicatorText);
+
+        this._iconsPath = extensionPath + "/assets/icons";
     }
 
+    // For readability
     setText(text) {
         this.indicatorText.set_text(text);
     }
@@ -36,23 +37,17 @@ class IndicatorClass extends PanelMenu.Button {
         const mm = (minutesToNext % 60).toString().padStart(2, "0");
         this.indicatorText.set_text(`${nextName} - ${hh}:${mm}`);
     }
-}
-const Indicator = GObject.registerClass(IndicatorClass);
 
-class MenuClass extends GObject.Object {
-    _init(prayers, times, nextPrayerI, extensionPath, clockFormat, menu) {
-        super._init();
-        this._menu = menu;
-        this._menuItems = [];
-
+    populateMenu(prayers, times, nextPrayerI, clockFormat) {
         const timeFormat = clockFormat === "12h" ? _("%l:%M %p") : _("%R");
 
+        this._menuItems = [];
         for (const prayer of prayers) {
             const menuItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, activate: false, hover: false });
 
             menuItem.add_child(
                 new St.Icon({
-                    gicon: Gio.icon_new_for_string(`${extensionPath}/assets/icons/${prayer.id}.svg`),
+                    gicon: Gio.icon_new_for_string(`${this._iconsPath}/${prayer.id}.svg`),
                     icon_size: 20,
                 })
             );
@@ -69,7 +64,7 @@ class MenuClass extends GObject.Object {
                 })
             );
 
-            menu.addMenuItem(menuItem);
+            this.menu.addMenuItem(menuItem);
             this._menuItems.push(menuItem);
         }
 
@@ -83,13 +78,11 @@ class MenuClass extends GObject.Object {
         this._menuItems[i].add_style_class_name("active");
     }
 
-    destroy() {
-        this._menuItems = null;
-        this._menu.destroy();
-        this._menu = null;
+    destroyMenuItems() {
+        this.menu.removeAll();
     }
 }
-const Menu = GObject.registerClass(MenuClass);
+const Indicator = GObject.registerClass(IndicatorClass);
 
 export default class PrayerTime extends Extension {
     constructor(metadata) {
@@ -99,7 +92,7 @@ export default class PrayerTime extends Extension {
     enable() {
         this._settings = new SettingManager(this);
 
-        this._indicator = new Indicator(this.metadata.name);
+        this._indicator = new Indicator(this.metadata.name, this.path);
         Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
 
         this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
@@ -204,11 +197,11 @@ export default class PrayerTime extends Extension {
                     }
                     nextPrayer.i = 0;
 
-                    this._menu.destroy();
-                    this._menu = new Menu(this._prayers, this._times, this.path, this._settings.clockFormat, this._indicator.menu);
+                    this._indicator.destroyMenuItems();
+                    this._indicator.populateMenu(this._prayers, this._times, nextPrayer.i, this._settings.clockFormat);
                 } else {
                     nextPrayer.i++;
-                    this._menu.highlightMenuItem(nextPrayer.i);
+                    this._indicator.highlightMenuItem(nextPrayer.i);
                 }
                 nextPrayer.name = this._prayers[nextPrayer.i].name;
                 nextPrayer.timeLeft = this._differenceToMinutes(this._times[this._prayers[nextPrayer.i].id].difference(now));
@@ -226,16 +219,14 @@ export default class PrayerTime extends Extension {
             return GLib.SOURCE_CONTINUE;
         });
 
-        this._menu = new Menu(this._prayers, this._times, nextPrayer.i, this.path, this._settings.clockFormat, this._indicator.menu);
+        this._indicator.populateMenu(this._prayers, this._times, nextPrayer.i, this._settings.clockFormat);
     }
 
+    // For setting changes
     _reloadMain() {
         GLib.Source.remove(this._timeoutId);
         this._timeoutId = null;
-
-        this._menu.destroy();
-        this._menu = null;
-
+        this._indicator.destroyMenuItems();
         this._main();
     }
 
@@ -249,8 +240,6 @@ export default class PrayerTime extends Extension {
 
         this._times = null;
 
-        this._menu.destroy();
-        this._menu = null;
         this._indicator.destroy();
         this._indicator = null;
 
