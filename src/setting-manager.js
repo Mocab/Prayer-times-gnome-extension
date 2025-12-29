@@ -11,7 +11,7 @@ class SettingManagerClass extends GObject.Object {
         this._gSettings = extension.getSettings();
         this._id = extension.metadata["settings-schema"];
         this._name = extension.metadata.name;
-        this._reloadExtensionMain = extension._reloadMain;
+        this._reloadExtensionMain = extension._reloadMain.bind(extension);
 
         const gnomeSettings = Gio.Settings.new("org.gnome.desktop.interface"); // TODO: is it really worth it to .connect()?
         this.clockFormat = gnomeSettings.get_string("clock-format");
@@ -58,7 +58,7 @@ class SettingManagerClass extends GObject.Object {
                     this._reloadExtensionMain();
                 });
             } catch (error) {
-                Main.notifyError(this._name, _("Failed to connect to Geoclue, defaulting to manual location: %s").format(error.message)); // TODO: this_name translate
+                Main.notifyError(this._name, _("Failed to connect to Geoclue, defaulting to manual location: %s").format(error.message)); // TODO: translate this._name?
                 this._gSettings.set_value("auto-location", GLib.Variant.new_boolean(false));
             }
         });
@@ -95,9 +95,8 @@ class SettingManagerClass extends GObject.Object {
         });
         // Calculation group
         this._gSettingListener.presetAngles = this._gSettings.connect("changed::preset-methods", (gSetting, key) => {
-            const presetAngleId = gSetting.get_string(key);
-            this.calcMethod.id = id;
-            if (presetAngleId === "custom") {
+            this.calcMethod.id = gSetting.get_string(key);
+            if (this.calcMethod.id === "custom") {
                 this._gSettingListener.fajrMethod = this._gSettings.connect("changed::fajr-method", (gSetting, key) => {
                     this.calcMethod.fajr = gSetting.get_double(key);
                     this._reloadExtensionMain();
