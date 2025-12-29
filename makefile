@@ -14,9 +14,9 @@ $(PACK_NAME).zip:
 		--extra-source="../assets" \
 	    --extra-source="../CHANGELOG.md"
 
-pack: $(PACK_NAME).zip
+pack: clean $(PACK_NAME).zip
 
-install: $(PACK_NAME).zip
+install: clean $(PACK_NAME).zip
 	@echo "Installing $(PACK_NAME)"
 	@gnome-extensions install --force $(PACK_NAME).zip
 
