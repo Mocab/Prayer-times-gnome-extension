@@ -3,7 +3,7 @@
     "description": "Highly customizable and efficient prayer time and athan reminder extension for Gnome.",
     "url": "https://github.com/Mocab/Prayer-times-gnome-extension",
     "uuid": "prayertimes@mocab",
-    "shell-version": ["48", "49"],
+    "shell-version": ["48", "49", "50"],
     "version": 13,
     "settings-schema": "org.gnome.shell.extensions.prayertimes",
     "gettext-domain": "prayertimes@mocab"
