@@ -24,7 +24,7 @@ export class CalcPrayerTimes {
         astronomicalHours.fajr = this.#angleBelowHorizonTime(fajrAngle, -1);
         const sunriseTime = this.#angleBelowHorizonTime(sunHorizonAngle, -1);
         astronomicalHours.duha = sunriseTime + 0.25; // 15 min after sunrise
-        astronomicalHours.thuhr = this.#midDayTime;
+        astronomicalHours.dhuhr = this.#midDayTime;
         astronomicalHours.asr = this.#angleBelowHorizonTime(this.#asrAngle(asrMethod));
         const sunsetTime = this.#angleBelowHorizonTime(sunHorizonAngle);
         astronomicalHours.maghrib = sunsetTime + 0.017; // ~1 minute after sunset
@@ -90,10 +90,13 @@ export class CalcPrayerTimes {
         switch (highLatAdjustment) {
             case "night-middle":
                 factor = 0.5;
+                break;
             case "night-seventh":
                 factor = 1 / 7;
+                break;
             case "angle":
                 factor = (1 / 60) * angle;
+                break;
         }
         const maxTimeLen = nightLen * factor;
         const timeDiff = (time - base) * direction;

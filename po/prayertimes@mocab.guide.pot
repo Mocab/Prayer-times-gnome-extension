@@ -40,7 +40,7 @@ msgid "Duha"
 msgstr ""
 
 #: extension.js:167
-msgid "Thuhr"
+msgid "Dhuhr"
 msgstr ""
 
 #: extension.js:168

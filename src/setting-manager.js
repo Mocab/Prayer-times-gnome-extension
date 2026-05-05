@@ -19,11 +19,10 @@ class SettingManagerClass extends GObject.Object {
         // Location group
         this.isAutoLocation = this._gSettings.get_boolean("auto-location");
         this.location = {};
+        this.location.latitude = this._gSettings.get_double("latitude");
+        this.location.longitude = this._gSettings.get_double("longitude");
         if (this.isAutoLocation) {
             this._enableGeoclue();
-        } else {
-            this.location.latitude = this._gSettings.get_double("latitude");
-            this.location.longitude = this._gSettings.get_double("longitude");
         }
         // Calculation group
         this.calcMethod = {};
@@ -36,6 +35,12 @@ class SettingManagerClass extends GObject.Object {
         this.asrMethod = this._gSettings.get_string("asr-method");
         this.highLatAdjustment = this._gSettings.get_string("high-latitude-adjustment");
         this.isIncludeSunnah = this._gSettings.get_boolean("include-sunnah");
+        // Display group
+        this.prayerNames = this._loadPrayerNames();
+        this.useAmPm = this._gSettings.get_boolean("use-am-pm");
+        // Mawaqit group
+        this.useMawaqit = this._gSettings.get_boolean("use-mawaqit");
+        this.mawaqitSlug = this._gSettings.get_string("mawaqit-slug");
         // Notification group
         this.isNotifyPrayer = this._gSettings.get_boolean("notify-prayer");
         this.isSoundPlayer = this._gSettings.get_boolean("sound-player");
@@ -58,10 +63,21 @@ class SettingManagerClass extends GObject.Object {
                     this._reloadExtensionMain();
                 });
             } catch (error) {
-                Main.notifyError(this._name, _("Failed to connect to Geoclue, defaulting to manual location: %s").format(error.message)); // TODO: translate this._name?
-                this._gSettings.set_value("auto-location", GLib.Variant.new_boolean(false));
+                this.location.latitude = this._gSettings.get_double("latitude");
+                this.location.longitude = this._gSettings.get_double("longitude");
+                Main.notify(this._name, _("Failed to connect to Geoclue, defaulting to manual location: %s").format(error.message));
+                this._gSettings.set_boolean("auto-location", false);
+                this._reloadExtensionMain();
             }
         });
+    }
+
+    _loadPrayerNames() {
+        try {
+            return JSON.parse(this._gSettings.get_string("prayer-names"));
+        } catch (e) {
+            return { fajr: "Fajr", duha: "Duha", dhuhr: "Dhuhr", asr: "Asr", maghrib: "Maghrib", isha: "Isha", jummah: "Jummah" };
+        }
     }
 
     connectSettings() {
@@ -69,17 +85,24 @@ class SettingManagerClass extends GObject.Object {
         // Location group
         this._gSettingListener.isAutoLocation = this._gSettings.connect("changed::auto-location", (gSetting, key) => {
             if (gSetting.get_boolean(key)) {
-                this._gSettings.disconnect(this._gSettingListener.latitude);
-                this._gSettings.disconnect(this._gSettingListener.longitude);
-                this._gSettingListener.latitude = null;
-                this._gSettingListener.longitude = null;
+                if (this._gSettingListener.latitude) {
+                    this._gSettings.disconnect(this._gSettingListener.latitude);
+                    this._gSettingListener.latitude = null;
+                }
+                if (this._gSettingListener.longitude) {
+                    this._gSettings.disconnect(this._gSettingListener.longitude);
+                    this._gSettingListener.longitude = null;
+                }
 
-                this.location = this._enableGeoclue();
+                this._enableGeoclue();
             } else {
-                this._geoclueService.disconnect(this._geoclueServiceListener);
-                this._geoclueServiceListener = null;
+                if (this._geoclueService && this._geoclueServiceListener) {
+                    this._geoclueService.disconnect(this._geoclueServiceListener);
+                    this._geoclueServiceListener = null;
+                }
                 this._geoclueService = null;
 
+                if (!this.location) this.location = {};
                 this.location.latitude = this._gSettings.get_double("latitude");
                 this.location.longitude = this._gSettings.get_double("longitude");
 
@@ -126,7 +149,25 @@ class SettingManagerClass extends GObject.Object {
             this._reloadExtensionMain();
         });
         this._gSettingListener.isIncludeSunnah = this._gSettings.connect("changed::include-sunnah", (gSetting, key) => {
-            this.isIncludeSunnah = gSetting.get_string(key);
+            this.isIncludeSunnah = gSetting.get_boolean(key);
+            this._reloadExtensionMain();
+        });
+        // Display group
+        this._gSettingListener.prayerNames = this._gSettings.connect("changed::prayer-names", (gSetting, key) => {
+            this.prayerNames = this._loadPrayerNames();
+            this._reloadExtensionMain();
+        });
+        this._gSettingListener.useAmPm = this._gSettings.connect("changed::use-am-pm", (gSetting, key) => {
+            this.useAmPm = gSetting.get_boolean(key);
+            this._reloadExtensionMain();
+        });
+        // Mawaqit group
+        this._gSettingListener.useMawaqit = this._gSettings.connect("changed::use-mawaqit", (gSetting, key) => {
+            this.useMawaqit = gSetting.get_boolean(key);
+            this._reloadExtensionMain();
+        });
+        this._gSettingListener.mawaqitSlug = this._gSettings.connect("changed::mawaqit-slug", (gSetting, key) => {
+            this.mawaqitSlug = gSetting.get_string(key);
             this._reloadExtensionMain();
         });
         // Notification group
@@ -142,11 +183,12 @@ class SettingManagerClass extends GObject.Object {
     }
 
     destroy() {
-        for (let listener in this._gSettingListener) {
-            if (listener) {
-                this._gSettings.disconnect(listener);
-                listener = null;
+        for (const key of Object.keys(this._gSettingListener)) {
+            const handlerId = this._gSettingListener[key];
+            if (typeof handlerId === "number" && handlerId > 0) {
+                this._gSettings.disconnect(handlerId);
             }
+            this._gSettingListener[key] = null;
         }
         if (this._geoclueService) {
             this._geoclueService.disconnect(this._geoclueServiceListener);

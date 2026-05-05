@@ -52,6 +52,34 @@
             <description>Show times for sunnah prayers</description>
         </key>
 
+        <key name="prayer-names" type="s">
+            <summary>Custom prayer names</summary>
+            <default>'{"fajr":"Fajr","duha":"Duha","dhuhr":"Dhuhr","asr":"Asr","maghrib":"Maghrib","isha":"Isha","jummah":"Jummah"}'</default>
+            <description>JSON object with custom names for each prayer</description>
+        </key>
+
+        <key name="use-am-pm" type="b">
+            <summary>Use AM/PM format</summary>
+            <default>false</default>
+            <description>Override GNOME clock format to use AM/PM</description>
+        </key>
+
+        <key name="use-mawaqit" type="b">
+            <summary>Use Mawaqit for prayer times</summary>
+            <default>false</default>
+            <description>Fetch prayer times from Mawaqit instead of calculating locally</description>
+        </key>
+        <key name="mawaqit-slug" type="s">
+            <summary>Mawaqit mosque slug</summary>
+            <default>''</default>
+            <description>The slug of the selected Mawaqit mosque</description>
+        </key>
+        <key name="mawaqit-label" type="s">
+            <summary>Mawaqit mosque label</summary>
+            <default>''</default>
+            <description>The display name of the selected Mawaqit mosque</description>
+        </key>
+
         <key name="notify-prayer" type="b">
             <summary>Send notifications</summary>
             <default>true</default>

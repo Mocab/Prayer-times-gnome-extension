@@ -17,6 +17,14 @@ Highly customizable and efficient prayer time and athan reminder extension for G
     -   Asr shadow lengths
     -   High latitude Fajr and Isha correction (1/2 of night, 1/7th of night, and angle based)
     -   Optionally include sunnah prayers (Duha)
+-   Mawaqit Integration:
+    -   Fetch prayer times directly from [mawaqit.net](https://mawaqit.net/fr/) for your local mosque
+    -   Search and select the nearest mosque
+    -   Daily automatic refresh of online times
+    -   Fallback to local calculation if Mawaqit is unavailable
+-   Customization:
+    -   Custom prayer names (e.g. Dhuhr → Dhor, Thuhr → الظهر)
+    -   AM/PM format override
 -   Notifications:
     -   Send notifications for prayers
     -   Play a shorter version of an athan for prayers
@@ -51,6 +59,6 @@ As always any contributions are very welcome, this project is lilah and will ins
 
 ### :trophy: Credits:
 
-A special thanks to [praytimes.org](https://praytimes.org/) for documenting and providing the core time calculations, and the contributors who added to this project. May god reward you all greatly for it.
+A special thanks to [praytimes.org](https://praytimes.org/) for documenting and providing the core time calculations, [Mawaqit](https://mawaqit.net/fr/) for the mosque search API and online prayer times, and the contributors who added to this project. May god reward you all greatly for it.
 
 ###### Inspiration taken from [AthanTime](https://github.com/GoodM4ven/PATCH_EXTENSION_GNOME_athan)

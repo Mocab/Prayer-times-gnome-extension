@@ -38,7 +38,7 @@ msgid "Duha"
 msgstr "الضحى"
 
 #: extension.js:167
-msgid "Thuhr"
+msgid "Dhuhr"
 msgstr "الظهر"
 
 #: extension.js:168
