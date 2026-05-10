@@ -51,6 +51,11 @@
             <default>true</default>
             <description>Show times for sunnah prayers</description>
         </key>
+        <key name="use-local-calc" type="b">
+            <summary>Use local calculation</summary>
+            <default>true</default>
+            <description>Calculate prayer times locally based on location</description>
+        </key>
 
         <key name="prayer-names" type="s">
             <summary>Custom prayer names</summary>
@@ -62,6 +67,16 @@
             <summary>Use AM/PM format</summary>
             <default>false</default>
             <description>Override GNOME clock format to use AM/PM</description>
+        </key>
+        <key name="display-mode" type="s">
+            <summary>Display mode</summary>
+            <default>'countdown'</default>
+            <description>How to display the next prayer: countdown or clock-time</description>
+        </key>
+        <key name="show-seconds" type="b">
+            <summary>Show seconds</summary>
+            <default>false</default>
+            <description>Show seconds in the countdown display</description>
         </key>
 
         <key name="use-mawaqit" type="b">

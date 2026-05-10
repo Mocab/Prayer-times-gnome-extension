@@ -35,9 +35,12 @@ class SettingManagerClass extends GObject.Object {
         this.asrMethod = this._gSettings.get_string("asr-method");
         this.highLatAdjustment = this._gSettings.get_string("high-latitude-adjustment");
         this.isIncludeSunnah = this._gSettings.get_boolean("include-sunnah");
+        this.useLocalCalc = this._gSettings.get_boolean("use-local-calc");
         // Display group
         this.prayerNames = this._loadPrayerNames();
         this.useAmPm = this._gSettings.get_boolean("use-am-pm");
+        this.displayMode = this._gSettings.get_string("display-mode");
+        this.showSeconds = this._gSettings.get_boolean("show-seconds");
         // Mawaqit group
         this.useMawaqit = this._gSettings.get_boolean("use-mawaqit");
         this.mawaqitSlug = this._gSettings.get_string("mawaqit-slug");
@@ -65,7 +68,7 @@ class SettingManagerClass extends GObject.Object {
             } catch (error) {
                 this.location.latitude = this._gSettings.get_double("latitude");
                 this.location.longitude = this._gSettings.get_double("longitude");
-                Main.notify(this._name, _("Failed to connect to Geoclue, defaulting to manual location: %s").format(error.message));
+                Main.notify(this._name, `Failed to connect to Geoclue, defaulting to manual location: ${error.message}`);
                 this._gSettings.set_boolean("auto-location", false);
                 this._reloadExtensionMain();
             }
@@ -129,10 +132,14 @@ class SettingManagerClass extends GObject.Object {
                     this._reloadExtensionMain();
                 });
             } else {
-                this._gSettings.disconnect(this._gSettingListener.fajrMethod);
-                this._gSettings.disconnect(this._gSettingListener.ishaMethod);
-                this._gSettingListener.fajrMethod = null;
-                this._gSettingListener.ishaMethod = null;
+                if (this._gSettingListener.fajrMethod) {
+                    this._gSettings.disconnect(this._gSettingListener.fajrMethod);
+                    this._gSettingListener.fajrMethod = null;
+                }
+                if (this._gSettingListener.ishaMethod) {
+                    this._gSettings.disconnect(this._gSettingListener.ishaMethod);
+                    this._gSettingListener.ishaMethod = null;
+                }
 
                 this.calcMethod.fajr = null;
                 this.calcMethod.isha = null;
@@ -140,6 +147,16 @@ class SettingManagerClass extends GObject.Object {
                 this._reloadExtensionMain();
             }
         });
+        if (this.calcMethod.id === "custom") {
+            this._gSettingListener.fajrMethod = this._gSettings.connect("changed::fajr-method", (gSetting, key) => {
+                this.calcMethod.fajr = gSetting.get_double(key);
+                this._reloadExtensionMain();
+            });
+            this._gSettingListener.ishaMethod = this._gSettings.connect("changed::isha-method", (gSetting, key) => {
+                this.calcMethod.isha = gSetting.get_double(key);
+                this._reloadExtensionMain();
+            });
+        }
         this._gSettingListener.asrMethod = this._gSettings.connect("changed::asr-method", (gSetting, key) => {
             this.asrMethod = gSetting.get_string(key);
             this._reloadExtensionMain();
@@ -161,6 +178,14 @@ class SettingManagerClass extends GObject.Object {
             this.useAmPm = gSetting.get_boolean(key);
             this._reloadExtensionMain();
         });
+        this._gSettingListener.displayMode = this._gSettings.connect("changed::display-mode", (gSetting, key) => {
+            this.displayMode = gSetting.get_string(key);
+            this._reloadExtensionMain();
+        });
+        this._gSettingListener.showSeconds = this._gSettings.connect("changed::show-seconds", (gSetting, key) => {
+            this.showSeconds = gSetting.get_boolean(key);
+            this._reloadExtensionMain();
+        });
         // Mawaqit group
         this._gSettingListener.useMawaqit = this._gSettings.connect("changed::use-mawaqit", (gSetting, key) => {
             this.useMawaqit = gSetting.get_boolean(key);
@@ -168,6 +193,10 @@ class SettingManagerClass extends GObject.Object {
         });
         this._gSettingListener.mawaqitSlug = this._gSettings.connect("changed::mawaqit-slug", (gSetting, key) => {
             this.mawaqitSlug = gSetting.get_string(key);
+            this._reloadExtensionMain();
+        });
+        this._gSettingListener.useLocalCalc = this._gSettings.connect("changed::use-local-calc", (gSetting, key) => {
+            this.useLocalCalc = gSetting.get_boolean(key);
             this._reloadExtensionMain();
         });
         // Notification group

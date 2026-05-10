@@ -74,12 +74,22 @@ class IndicatorClass extends PanelMenu.Button {
         this.indicatorText.set_text(text);
     }
 
-    setTimeLeftText(nextName, minutesToNext) {
+    setTimeLeftText(nextName, minutesToNext, showSeconds) {
         const hh = Math.floor(minutesToNext / 60)
             .toString()
             .padStart(2, "0");
-        const mm = (minutesToNext % 60).toString().padStart(2, "0");
-        this.indicatorText.set_text(`${nextName} - ${hh}:${mm}`);
+        const mm = (Math.floor(minutesToNext) % 60).toString().padStart(2, "0");
+        if (showSeconds) {
+            const ss = Math.round((minutesToNext % 1) * 60).toString().padStart(2, "0");
+            this.indicatorText.set_text(`${nextName} in ${hh}:${mm}:${ss}`);
+        } else {
+            this.indicatorText.set_text(`${nextName} in ${hh}:${mm}`);
+        }
+    }
+
+    setClockTimeText(nextName, prayerTime, clockFormat) {
+        const timeFormat = clockFormat === "12h" ? _("%l:%M %p") : _("%R");
+        this.indicatorText.set_text(`${nextName} - ${prayerTime.format(timeFormat)}`);
     }
 }
 const Indicator = GObject.registerClass(IndicatorClass);
@@ -94,6 +104,11 @@ export default class PrayerTime extends Extension {
         this._mawaqitClient = new MawaqitClient();
         this._mawaqitTimes = null;
         this._lastMawaqitRefreshDay = null;
+        this._mawaqitRetryCount = 0;
+        this._mawaqitMaxRetries = 30; // 30 × 10s = 5 min
+        this._mawaqitRetryTimeout = null;
+        this._mawaqitFellBackToLocal = false;
+        this._lastMawaqitSlug = null;
 
         this._indicator = new Indicator(this.metadata.name);
         this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path);
@@ -130,17 +145,41 @@ export default class PrayerTime extends Extension {
         return this._settings.clockFormat;
     }
 
+    _cancelMawaqitRetry() {
+        if (this._mawaqitRetryTimeout) {
+            GLib.Source.remove(this._mawaqitRetryTimeout);
+            this._mawaqitRetryTimeout = null;
+        }
+    }
+
     _fetchMawaqitTimesIfNeeded() {
-        if (!this._settings.useMawaqit || !this._settings.mawaqitSlug) {
+        const slug = this._settings.mawaqitSlug;
+
+        if (!this._settings.useMawaqit || !slug) {
+            if (this._lastMawaqitSlug !== null) {
+                this._lastMawaqitSlug = null;
+                this._mawaqitRetryCount = 0;
+                this._mawaqitFellBackToLocal = false;
+                this._lastMawaqitRefreshDay = null;
+            }
             this._mawaqitTimes = null;
+            this._cancelMawaqitRetry();
             return;
+        }
+
+        if (slug !== this._lastMawaqitSlug) {
+            this._lastMawaqitSlug = slug;
+            this._mawaqitTimes = null;
+            this._mawaqitRetryCount = 0;
+            this._mawaqitFellBackToLocal = false;
+            this._lastMawaqitRefreshDay = null;
+            this._cancelMawaqitRetry();
         }
 
         const now = GLib.DateTime.new_now_local();
         const today = now.get_day_of_year();
 
-        // Already refreshed today
-        if (this._lastMawaqitRefreshDay === today && this._mawaqitTimes) {
+        if (this._lastMawaqitRefreshDay === today && (this._mawaqitTimes || this._mawaqitFellBackToLocal)) {
             return;
         }
 
@@ -148,82 +187,131 @@ export default class PrayerTime extends Extension {
             .then((times) => {
                 this._mawaqitTimes = times;
                 this._lastMawaqitRefreshDay = today;
-                // Reload to display Mawaqit times
+                this._mawaqitRetryCount = 0;
+                this._mawaqitFellBackToLocal = false;
+                this._cancelMawaqitRetry();
                 this._reloadMain();
             })
             .catch((error) => {
                 console.error("Mawaqit fetch failed:", error);
                 this._mawaqitTimes = null;
-                // Only notify once per day
-                if (this._lastMawaqitRefreshDay !== today) {
+                this._mawaqitRetryCount++;
+
+                if (this._mawaqitRetryCount === 1) {
+                    Main.notify(this.metadata.name, _("Mawaqit fetch failed, retrying…"));
+                }
+
+                const canFallback = this._settings.useLocalCalc;
+                const maxRetries = canFallback ? this._mawaqitMaxRetries : Infinity;
+
+                if (this._mawaqitRetryCount < maxRetries) {
+                    this._cancelMawaqitRetry();
+                    this._mawaqitRetryTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 10, () => {
+                        this._mawaqitRetryTimeout = null;
+                        this._fetchMawaqitTimesIfNeeded();
+                        return GLib.SOURCE_REMOVE;
+                    });
+                } else if (!this._mawaqitFellBackToLocal) {
+                    this._mawaqitFellBackToLocal = true;
                     this._lastMawaqitRefreshDay = today;
-                    Main.notify(this.metadata.name, _("Mawaqit fetch failed, using local calculation"));
+                    Main.notify(this.metadata.name, _("Mawaqit unavailable, using local calculation"));
+                    this._reloadMain();
                 }
             });
     }
 
     _getDatePrayerTimes(now, midnight) {
-        const today = { day: now.get_day_of_month(), month: now.get_month(), year: now.get_year() };
+        const date = { day: now.get_day_of_month(), month: now.get_month(), year: now.get_year() };
         const timezone = now.get_timezone();
-        const localTimes = new CalcPrayerTimes(today, timezone, this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+        const useMawaqit = this._settings.useMawaqit;
+        const useLocal = this._settings.useLocalCalc;
 
-        // If Mawaqit times are available and valid, use them
-        if (this._mawaqitTimes) {
-            const mTimes = this._mawaqitTimes;
-            // Validate: all required prayers must exist
-            const hasAllTimes = ["fajr", "dhuhr", "asr", "maghrib", "isha"].every(
-                (id) => mTimes[id] instanceof GLib.DateTime
-            );
-            if (hasAllTimes) {
-                // If duha is included locally but not in Mawaqit, keep local duha
-                if (this._settings.isIncludeSunnah && localTimes.duha && !mTimes.duha) {
-                    mTimes.duha = localTimes.duha;
-                }
-                return mTimes;
+        // Remote only, no fallback
+        if (useMawaqit && !useLocal) {
+            if (this._mawaqitTimes && this._mawaqitTimes.calendar) {
+                const mawaqitDateTimes = this._mawaqitClient.extractTimesForDate(
+                    this._mawaqitTimes.calendar, date.year, date.month, date.day
+                );
+                if (mawaqitDateTimes) return mawaqitDateTimes;
             }
+            return null;
         }
 
-        return localTimes;
+        // Local only (no remote)
+        if (useLocal && !useMawaqit) {
+            return new CalcPrayerTimes(date, timezone, this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+        }
+
+        // Both: remote with local fallback
+        if (useMawaqit && useLocal) {
+            if (this._mawaqitTimes && this._mawaqitTimes.calendar) {
+                const mawaqitDateTimes = this._mawaqitClient.extractTimesForDate(
+                    this._mawaqitTimes.calendar, date.year, date.month, date.day
+                );
+                if (mawaqitDateTimes) {
+                    const localTimes = new CalcPrayerTimes(date, timezone, this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+                    if (this._settings.isIncludeSunnah && localTimes.duha && !mawaqitDateTimes.duha) {
+                        mawaqitDateTimes.duha = localTimes.duha;
+                    }
+                    return mawaqitDateTimes;
+                }
+            }
+            return new CalcPrayerTimes(date, timezone, this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+        }
+
+        return null;
     }
 
     _differenceToMinutes(microseconds) {
-        return Math.round(microseconds / 6e7);
+        return microseconds / 6e7;
     }
 
     _getNextPrayer(now, midnight) {
-        let i = 0;
+        if (!this._times) return null;
 
-        while (i < this._prayers.length - 1) {
-            const timeToPrayerUs = this._times[this._prayers[i].id].difference(now);
+        for (let i = 0; i < this._prayers.length; i++) {
+            const t = this._times[this._prayers[i].id];
+            if (!t) continue;
+            const timeToPrayerUs = t.difference(now);
             if (timeToPrayerUs > 0) {
                 return { timeLeft: this._differenceToMinutes(timeToPrayerUs), i };
             }
-            i++;
         }
 
-        // Isha
-        const isNowBeforeMidnight = midnight.compare(now) === -1;
-        const timeToIshaUs = this._times.isha.difference(now);
-        if (timeToIshaUs > 0) {
-            if (isNowBeforeMidnight) {
-                return { timeLeft: this._differenceToMinutes(timeToIshaUs), i };
-            } else {
-                this._times = this._getDatePrayerTimes(now.add_days(-1), midnight);
-                return { timeLeft: this._differenceToMinutes(this._times.isha.difference(now)), i };
-            }
+        const tomorrow = now.add_days(1);
+        const tomorrowMidnight = GLib.DateTime.new_local(tomorrow.get_year(), tomorrow.get_month(), tomorrow.get_day_of_month(), 0, 0, 0.0);
+        this._times = this._getDatePrayerTimes(tomorrow, tomorrowMidnight);
+
+        if (!this._times || !this._times.fajr) return null;
+        const timeToFajrUs = this._times.fajr.difference(now);
+        return { timeLeft: this._differenceToMinutes(timeToFajrUs), i: 0 };
+    }
+
+    _updateIndicator(nextPrayer) {
+        if (this._settings.displayMode === "clock-time") {
+            this._indicator.setClockTimeText(
+                nextPrayer.name,
+                this._times[this._prayers[nextPrayer.i].id],
+                this._getClockFormat()
+            );
         } else {
-            i = 0;
-            if (isNowBeforeMidnight) {
-                this._times = this._getDatePrayerTimes(now.add_days(1), midnight);
-            } else {
-                this._times = this._getDatePrayerTimes(now, midnight);
-            }
-            return { timeLeft: this._differenceToMinutes(this._times.fajr.difference(now)), i };
+            this._indicator.setTimeLeftText(
+                nextPrayer.name,
+                nextPrayer.timeLeft,
+                this._settings.showSeconds
+            );
         }
     }
 
+    _isAwaitingMawaqit() {
+        return this._settings.useMawaqit && this._settings.mawaqitSlug && !this._mawaqitTimes && !this._mawaqitFellBackToLocal;
+    }
+
+    _hasAnySource() {
+        return this._settings.useLocalCalc || this._settings.useMawaqit;
+    }
+
     _main() {
-        // Try to fetch Mawaqit times in background
         this._fetchMawaqitTimesIfNeeded();
 
         const isFriday = GLib.DateTime.new_now_local().get_day_of_week() === 5;
@@ -237,25 +325,54 @@ export default class PrayerTime extends Extension {
             { id: "isha", name: this._getPrayerName("isha") },
         ];
 
+        if (this._isAwaitingMawaqit()) {
+            this._indicator.setText("…");
+            this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
+                if (this._mawaqitTimes) {
+                    this._reloadMain();
+                    return GLib.SOURCE_REMOVE;
+                }
+                if (this._mawaqitFellBackToLocal) {
+                    this._reloadMain();
+                    return GLib.SOURCE_REMOVE;
+                }
+                this._indicator.setText("…");
+                return GLib.SOURCE_CONTINUE;
+            });
+            return;
+        }
+
+        if (!this._hasAnySource()) {
+            this._indicator.setText("…");
+            return;
+        }
+
         let now = GLib.DateTime.new_now_local();
         let midnight = GLib.DateTime.new_local(now.get_year(), now.get_month(), now.get_day_of_month(), 0, 0, 0.0);
         this._times = this._getDatePrayerTimes(now, midnight);
         let nextPrayer = this._getNextPrayer(now, midnight);
+
+        if (!nextPrayer || !this._times) {
+            this._indicator.setText("…");
+            return;
+        }
+
         nextPrayer.name = this._prayers[nextPrayer.i].name;
 
-        this._indicator.setTimeLeftText(nextPrayer.name, nextPrayer.timeLeft);
-        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 60, () => {
-            nextPrayer.timeLeft--;
+        this._updateIndicator(nextPrayer);
 
-            // Check for day change at 00:01 to refresh Mawaqit
+        const timeoutSeconds = this._settings.showSeconds && this._settings.displayMode === "countdown" ? 1 : 60;
+        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, timeoutSeconds, () => {
             const currentNow = GLib.DateTime.new_now_local();
             if (currentNow.get_hour() === 0 && currentNow.get_minute() === 1) {
                 this._fetchMawaqitTimesIfNeeded();
             }
 
+            const timeToNextUs = this._times[this._prayers[nextPrayer.i].id].difference(currentNow);
+            nextPrayer.timeLeft = this._differenceToMinutes(timeToNextUs);
+
             if (nextPrayer.timeLeft <= 0) {
                 const text = _("Time for %s").format(nextPrayer.name);
-
                 this._indicator.setText(text);
 
                 if (this._settings.isNotifyPrayer) {
@@ -265,36 +382,31 @@ export default class PrayerTime extends Extension {
                     this._player.play_from_file(this._soundFile, text, null);
                 }
 
-                // If last prayer move to next day
-                now = GLib.DateTime.new_now_local();
-                if (nextPrayer.i === this._prayers.length - 1) {
-                    midnight = GLib.DateTime.new_local(now.get_year(), now.get_month(), now.get_day_of_month(), 0, 0, 0.0);
-                    if (midnight.compare(now) === -1) {
-                        this._times = this._getDatePrayerTimes(now.add_days(1), midnight);
-                    } else {
-                        this._times = this._getDatePrayerTimes(now, midnight);
-                    }
-                    nextPrayer.i = 0;
-
-                    this._menu.removeAll();
-                    this._menu.populate(this._prayers, this._times, this._getClockFormat());
-                } else {
-                    nextPrayer.i++;
+                // Recalculate from scratch — skip all past prayers
+                this._reminderFired = false;
+                const now2 = GLib.DateTime.new_now_local();
+                const midnight2 = GLib.DateTime.new_local(now2.get_year(), now2.get_month(), now2.get_day_of_month(), 0, 0, 0.0);
+                nextPrayer = this._getNextPrayer(now2, midnight2);
+                if (!nextPrayer) {
+                    this._reloadMain();
+                    return GLib.SOURCE_REMOVE;
                 }
-                this._menu.highlightItem(nextPrayer.i);
                 nextPrayer.name = this._prayers[nextPrayer.i].name;
-                nextPrayer.timeLeft = this._differenceToMinutes(this._times[this._prayers[nextPrayer.i].id].difference(now));
-            } else if (this._settings.reminder && nextPrayer.timeLeft === this._settings.reminder) {
-                const text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder);
 
+                this._menu.removeAll();
+                this._menu.populate(this._prayers, this._times, this._getClockFormat());
+                this._menu.highlightItem(nextPrayer.i);
+            } else if (this._settings.reminder && nextPrayer.timeLeft <= this._settings.reminder && nextPrayer.timeLeft > this._settings.reminder - 1 && !this._reminderFired) {
+                this._reminderFired = true;
+                const text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder);
                 this._indicator.setText(text);
 
                 if (this._settings.isNotifyPrayer) {
                     Main.notify(this.metadata.name, text);
                 }
-            } else {
-                this._indicator.setTimeLeftText(nextPrayer.name, nextPrayer.timeLeft);
             }
+
+            this._updateIndicator(nextPrayer);
             return GLib.SOURCE_CONTINUE;
         });
 
@@ -307,11 +419,14 @@ export default class PrayerTime extends Extension {
             GLib.Source.remove(this._timeoutId);
             this._timeoutId = null;
         }
+        this._cancelMawaqitRetry();
         this._menu.removeAll();
         this._main();
     }
 
     disable() {
+        this._cancelMawaqitRetry();
+
         if (this._timeoutId) {
             GLib.Source.remove(this._timeoutId);
             this._timeoutId = null;

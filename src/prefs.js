@@ -2,6 +2,7 @@ import Adw from "gi://Adw";
 import Gtk from "gi://Gtk";
 import GLib from "gi://GLib";
 import Gio from "gi://Gio";
+import Soup from "gi://Soup";
 import { ExtensionPreferences, gettext as _ } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
 export default class PrayerTimePreferences extends ExtensionPreferences {
@@ -24,8 +25,9 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             icon_name: "system-run-symbolic",
         });
         window.add(calcPage);
-        this.#locationGroup(calcPage, gSettings);
+        this.#localCalcToggle(calcPage, gSettings);
         this.#calcGroup(calcPage, gSettings);
+        this.#locationGroup(calcPage, gSettings);
 
         // Tab 3: Online
         const mawaqitPage = new Adw.PreferencesPage({
@@ -108,11 +110,48 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         page.add(group);
 
+        const displayModes = [
+            { id: "countdown", name: _("Countdown") },
+            { id: "clock-time", name: _("Prayer time") },
+        ];
+        const displayMode = new Adw.ComboRow({
+            title: _("Display mode"),
+            subtitle: _("Show countdown or prayer clock time in the top bar"),
+            model: new Gtk.StringList({ strings: displayModes.map((m) => m.name) }),
+        });
+        group.add(displayMode);
+
+        const showSeconds = new Adw.SwitchRow({
+            title: _("Show seconds"),
+            subtitle: _("Display seconds in the countdown"),
+        });
+        group.add(showSeconds);
+
         const useAmPm = new Adw.SwitchRow({
             title: _("Use AM/PM format"),
             subtitle: _("Override system clock format"),
         });
         group.add(useAmPm);
+
+        let updatingDisplay = false;
+        function displayModeGSettingToUi() {
+            updatingDisplay = true;
+            displayMode.selected = displayModes.findIndex((m) => m.id === gSettings.get_string("display-mode"));
+            updatingDisplay = false;
+        }
+        displayModeGSettingToUi();
+        gSettings.connect("changed::display-mode", displayModeGSettingToUi);
+        displayMode.connect("notify::selected", () => {
+            if (!updatingDisplay) gSettings.set_string("display-mode", displayModes[displayMode.selected].id);
+        });
+
+        function updateSecondsSensitivity() {
+            showSeconds.sensitive = gSettings.get_string("display-mode") === "countdown";
+        }
+        updateSecondsSensitivity();
+        gSettings.connect("changed::display-mode", updateSecondsSensitivity);
+
+        gSettings.bind("show-seconds", showSeconds, "active", 0);
         gSettings.bind("use-am-pm", useAmPm, "active", 0);
     }
 
@@ -159,11 +198,35 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
     // ─── Calculation Tab ───
 
+    #localCalcToggle(page, gSettings) {
+        const group = new Adw.PreferencesGroup({
+            title: _("Local Calculation"),
+        });
+        page.add(group);
+
+        const useLocalCalc = new Adw.SwitchRow({
+            title: _("Use local calculation"),
+            subtitle: _("Calculate prayer times based on your location"),
+        });
+        group.add(useLocalCalc);
+        gSettings.bind("use-local-calc", useLocalCalc, "active", 0);
+
+        this._localCalcToggle = useLocalCalc;
+        this._localCalcGroup = group;
+    }
+
     #locationGroup(page, gSettings) {
         const group = new Adw.PreferencesGroup({
             title: _("Location"),
         });
         page.add(group);
+
+        const useLocalCalc = this._localCalcToggle;
+        const updateGroupSensitivity = () => {
+            group.sensitive = useLocalCalc.active;
+        };
+        updateGroupSensitivity();
+        useLocalCalc.connect("notify::active", updateGroupSensitivity);
 
         const autoLocation = new Adw.SwitchRow({
             title: _("Automatic"),
@@ -209,6 +272,13 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             title: _("Calculations"),
         });
         page.add(group);
+
+        const useLocalCalc = this._localCalcToggle;
+        const updateCalcSensitivity = () => {
+            group.sensitive = useLocalCalc.active;
+        };
+        updateCalcSensitivity();
+        useLocalCalc.connect("notify::active", updateCalcSensitivity);
 
         const presetMethods = [
             { id: "mwl", name: _("Muslim World League (London)") },
@@ -445,14 +515,14 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
          let searchTimeout = null;
          searchRow.connect("changed", () => {
              if (searchTimeout) {
-                 GLib.source_remove(searchTimeout);
+                 GLib.Source.remove(searchTimeout);
              }
              const query = searchRow.text.trim();
              if (query.length < 2) {
                  clearResults();
                  return;
              }
-             searchTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 0.5, () => {
+             searchTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
                  this._searchMosques(query, mosqueGroup, resultRows, selectMosque);
                  searchTimeout = null;
                  return GLib.SOURCE_REMOVE;
@@ -531,19 +601,19 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
     }
 
     _searchMosques(query, searchGroup, resultRows, onSelect) {
+        if (!this._soupSession) this._soupSession = new Soup.Session();
         const encodedQuery = encodeURIComponent(query);
         const uri = `https://mawaqit.net/api/2.0/mosque/search?word=${encodedQuery}&fields=slug,label,localisation,name,times`;
-        const file = Gio.File.new_for_uri(uri);
+        const message = Soup.Message.new("GET", uri);
 
-        file.load_contents_async(null, (source, result) => {
+        this._soupSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
             try {
-                const [success, contents] = source.load_contents_finish(result);
-                if (!success) return;
+                const bytes = session.send_and_read_finish(result);
+                if (message.status_code !== Soup.Status.OK) return;
 
-                const data = JSON.parse(new TextDecoder().decode(contents));
+                const data = JSON.parse(new TextDecoder().decode(bytes.get_data()));
                 if (!Array.isArray(data) || data.length === 0) return;
 
-                // Clear previous results
                 for (const row of resultRows) {
                     searchGroup.remove(row);
                 }
@@ -566,15 +636,15 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
     }
 
     _fetchMosqueTimes(slug, onTimes) {
-        const uri = `https://mawaqit.net/fr/${slug}`;
-        const file = Gio.File.new_for_uri(uri);
+        if (!this._soupSession) this._soupSession = new Soup.Session();
+        const message = Soup.Message.new("GET", `https://mawaqit.net/fr/${slug}`);
 
-        file.load_contents_async(null, (source, result) => {
+        this._soupSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
             try {
-                const [success, contents] = source.load_contents_finish(result);
-                if (!success) return;
+                const bytes = session.send_and_read_finish(result);
+                if (message.status_code !== Soup.Status.OK) return;
 
-                const html = new TextDecoder().decode(contents);
+                const html = new TextDecoder().decode(bytes.get_data());
                 const times = this._parseConfDataTimes(html);
                 if (times) onTimes(times);
             } catch (e) {
