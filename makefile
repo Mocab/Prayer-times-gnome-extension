@@ -25,4 +25,4 @@ clean:
 	@rm -rf $(PACK_NAME).zip
 
 dev: clean install
-	dbus-run-session -- gnome-shell --nested --wayland
+	dbus-run-session gnome-shell --devkit --wayland
