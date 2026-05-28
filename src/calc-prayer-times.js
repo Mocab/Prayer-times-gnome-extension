@@ -86,18 +86,21 @@ export class CalcPrayerTimes {
     }
 
     #adjustHighLat(highLatAdjustment, time, angle, base, nightLen, direction = 1) {
-        let factor;
+        let factor = 0;
         switch (highLatAdjustment) {
             case "night-middle":
                 factor = 0.5;
+                break;
             case "night-seventh":
                 factor = 1 / 7;
+                break;
             case "angle":
-                factor = (1 / 60) * angle;
+                factor = angle / 60;
+                break;
         }
         const maxTimeLen = nightLen * factor;
-        const timeDiff = (time - base) * direction;
-        if (timeDiff > maxTimeLen) {
+        // If no valid fajr/isha (edge case) or time difference is > maxTimeLen
+        if (Number.isNaN(time) || (time - base) * direction > maxTimeLen) {
             return base + maxTimeLen * direction;
         }
         return time;
