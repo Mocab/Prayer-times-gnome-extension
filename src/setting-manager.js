@@ -40,7 +40,6 @@ class SettingManagerClass extends GObject.Object {
         this.prayerNames = this._loadPrayerNames();
         this.useAmPm = this._gSettings.get_boolean("use-am-pm");
         this.displayMode = this._gSettings.get_string("display-mode");
-        this.showSeconds = this._gSettings.get_boolean("show-seconds");
         // Mawaqit group
         this.useMawaqit = this._gSettings.get_boolean("use-mawaqit");
         this.mawaqitSlug = this._gSettings.get_string("mawaqit-slug");
@@ -180,10 +179,6 @@ class SettingManagerClass extends GObject.Object {
         });
         this._gSettingListener.displayMode = this._gSettings.connect("changed::display-mode", (gSetting, key) => {
             this.displayMode = gSetting.get_string(key);
-            this._reloadExtensionMain();
-        });
-        this._gSettingListener.showSeconds = this._gSettings.connect("changed::show-seconds", (gSetting, key) => {
-            this.showSeconds = gSetting.get_boolean(key);
             this._reloadExtensionMain();
         });
         // Mawaqit group

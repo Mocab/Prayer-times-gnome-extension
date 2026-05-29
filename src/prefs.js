@@ -121,12 +121,6 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         group.add(displayMode);
 
-        const showSeconds = new Adw.SwitchRow({
-            title: _("Show seconds"),
-            subtitle: _("Display seconds in the countdown"),
-        });
-        group.add(showSeconds);
-
         const useAmPm = new Adw.SwitchRow({
             title: _("Use AM/PM format"),
             subtitle: _("Override system clock format"),
@@ -145,13 +139,6 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             if (!updatingDisplay) gSettings.set_string("display-mode", displayModes[displayMode.selected].id);
         });
 
-        function updateSecondsSensitivity() {
-            showSeconds.sensitive = gSettings.get_string("display-mode") === "countdown";
-        }
-        updateSecondsSensitivity();
-        gSettings.connect("changed::display-mode", updateSecondsSensitivity);
-
-        gSettings.bind("show-seconds", showSeconds, "active", 0);
         gSettings.bind("use-am-pm", useAmPm, "active", 0);
     }
 
@@ -454,101 +441,101 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             timeRows[id] = timeLabel;
         }
 
-         myMosqueRow.visible = false;
-         timesGroup.visible = false;
+        myMosqueRow.visible = false;
+        timesGroup.visible = false;
 
-         const controlledGroups = [mosqueGroup, timesGroup];
+        const controlledGroups = [mosqueGroup, timesGroup];
 
-         function updateSensitivity() {
-             const active = useMawaqit.active;
-             for (const g of controlledGroups) {
-                 g.sensitive = active;
-             }
-         }
-         updateSensitivity();
-         useMawaqit.connect("notify::active", updateSensitivity);
+        function updateSensitivity() {
+            const active = useMawaqit.active;
+            for (const g of controlledGroups) {
+                g.sensitive = active;
+            }
+        }
+        updateSensitivity();
+        useMawaqit.connect("notify::active", updateSensitivity);
 
-         function displayTimes(times) {
-             if (!times || times.length < 5) return;
-             if (times.length === 6) {
-                 timeRows.fajr.label = times[0];
-                 timeRows.dhuhr.label = times[2];
-                 timeRows.asr.label = times[3];
-                 timeRows.maghrib.label = times[4];
-                 timeRows.isha.label = times[5];
-             } else {
-                 timeRows.fajr.label = times[0];
-                 timeRows.dhuhr.label = times[1];
-                 timeRows.asr.label = times[2];
-                 timeRows.maghrib.label = times[3];
-                 timeRows.isha.label = times[4];
-             }
-             timesGroup.visible = true;
-         }
+        function displayTimes(times) {
+            if (!times || times.length < 5) return;
+            if (times.length === 6) {
+                timeRows.fajr.label = times[0];
+                timeRows.dhuhr.label = times[2];
+                timeRows.asr.label = times[3];
+                timeRows.maghrib.label = times[4];
+                timeRows.isha.label = times[5];
+            } else {
+                timeRows.fajr.label = times[0];
+                timeRows.dhuhr.label = times[1];
+                timeRows.asr.label = times[2];
+                timeRows.maghrib.label = times[3];
+                timeRows.isha.label = times[4];
+            }
+            timesGroup.visible = true;
+        }
 
-         function selectMosque(mosque) {
-             gSettings.set_string("mawaqit-slug", mosque.slug);
-             gSettings.set_string("mawaqit-label", mosque.label || mosque.name);
-             myMosqueRow.title = mosque.label || mosque.name;
-             myMosqueRow.subtitle = mosque.localisation || "";
-             myMosqueRow.visible = true;
-             displayTimes(mosque.times);
-             searchRow.text = "";
-             clearResults();
-         }
+        function selectMosque(mosque) {
+            gSettings.set_string("mawaqit-slug", mosque.slug);
+            gSettings.set_string("mawaqit-label", mosque.label || mosque.name);
+            myMosqueRow.title = mosque.label || mosque.name;
+            myMosqueRow.subtitle = mosque.localisation || "";
+            myMosqueRow.visible = true;
+            displayTimes(mosque.times);
+            searchRow.text = "";
+            clearResults();
+        }
 
-         function clearResults() {
-             for (const row of resultRows) {
-                 mosqueGroup.remove(row);
-             }
-             resultRows = [];
-         }
+        function clearResults() {
+            for (const row of resultRows) {
+                mosqueGroup.remove(row);
+            }
+            resultRows = [];
+        }
 
-         const currentSlug = gSettings.get_string("mawaqit-slug");
-         const currentLabel = gSettings.get_string("mawaqit-label");
-         if (currentSlug) {
-             myMosqueRow.title = currentLabel || currentSlug;
-             myMosqueRow.visible = true;
-             this._fetchMosqueTimes(currentSlug, displayTimes);
-         }
+        const currentSlug = gSettings.get_string("mawaqit-slug");
+        const currentLabel = gSettings.get_string("mawaqit-label");
+        if (currentSlug) {
+            myMosqueRow.title = currentLabel || currentSlug;
+            myMosqueRow.visible = true;
+            this._fetchMosqueTimes(currentSlug, displayTimes);
+        }
 
-         let searchTimeout = null;
-         searchRow.connect("changed", () => {
-             if (searchTimeout) {
-                 GLib.Source.remove(searchTimeout);
-             }
-             const query = searchRow.text.trim();
-             if (query.length < 2) {
-                 clearResults();
-                 return;
-             }
-             searchTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                 this._searchMosques(query, mosqueGroup, resultRows, selectMosque);
-                 searchTimeout = null;
-                 return GLib.SOURCE_REMOVE;
-             });
-         });
+        let searchTimeout = null;
+        searchRow.connect("changed", () => {
+            if (searchTimeout) {
+                GLib.Source.remove(searchTimeout);
+            }
+            const query = searchRow.text.trim();
+            if (query.length < 2) {
+                clearResults();
+                return;
+            }
+            searchTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                this._searchMosques(query, mosqueGroup, resultRows, selectMosque);
+                searchTimeout = null;
+                return GLib.SOURCE_REMOVE;
+            });
+        });
 
-         refreshButton.connect("clicked", () => {
-             const slug = gSettings.get_string("mawaqit-slug");
-             if (slug) {
-                 for (const id of prayerIds) timeRows[id].label = "...";
-                 this._fetchMosqueTimes(slug, displayTimes);
-             }
-         });
+        refreshButton.connect("clicked", () => {
+            const slug = gSettings.get_string("mawaqit-slug");
+            if (slug) {
+                for (const id of prayerIds) timeRows[id].label = "...";
+                this._fetchMosqueTimes(slug, displayTimes);
+            }
+        });
 
-         gSettings.connect("changed::mawaqit-slug", () => {
-             const slug = gSettings.get_string("mawaqit-slug");
-             const label = gSettings.get_string("mawaqit-label");
-             if (slug) {
-                 myMosqueRow.title = label || slug;
-                 myMosqueRow.visible = true;
-                 this._fetchMosqueTimes(slug, displayTimes);
-             } else {
-                 myMosqueRow.visible = false;
-                 timesGroup.visible = false;
-             }
-         });
+        gSettings.connect("changed::mawaqit-slug", () => {
+            const slug = gSettings.get_string("mawaqit-slug");
+            const label = gSettings.get_string("mawaqit-label");
+            if (slug) {
+                myMosqueRow.title = label || slug;
+                myMosqueRow.visible = true;
+                this._fetchMosqueTimes(slug, displayTimes);
+            } else {
+                myMosqueRow.visible = false;
+                timesGroup.visible = false;
+            }
+        });
 
         // Credits
         const logoPath = this.dir.get_child("assets").get_child("mawaqit-logo.png").get_path();
@@ -576,7 +563,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             width_request: 300,
         });
         const creditsTitle = new Gtk.Label({
-            label: _("Prayer times provided by <a href=\"https://mawaqit.net/fr/\">Mawaqit</a>"),
+            label: _('Prayer times provided by <a href="https://mawaqit.net/fr/">Mawaqit</a>'),
             use_markup: true,
             xalign: 0,
             halign: Gtk.Align.START,
@@ -670,13 +657,27 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
         for (let i = jsonStart; i < html.length; i++) {
             const char = html[i];
-            if (escapeNext) { escapeNext = false; continue; }
-            if (char === '\\') { escapeNext = true; continue; }
-            if (!inString && (char === '"' || char === "'")) { inString = true; stringChar = char; continue; }
-            if (inString && char === stringChar) { inString = false; stringChar = null; continue; }
+            if (escapeNext) {
+                escapeNext = false;
+                continue;
+            }
+            if (char === "\\") {
+                escapeNext = true;
+                continue;
+            }
+            if (!inString && (char === '"' || char === "'")) {
+                inString = true;
+                stringChar = char;
+                continue;
+            }
+            if (inString && char === stringChar) {
+                inString = false;
+                stringChar = null;
+                continue;
+            }
             if (!inString) {
-                if (char === '{') braceCount++;
-                else if (char === '}') braceCount--;
+                if (char === "{") braceCount++;
+                else if (char === "}") braceCount--;
                 if (braceCount === 0 && i > jsonStart) {
                     const jsonStr = html.substring(jsonStart, i + 1);
                     try {

@@ -73,11 +73,6 @@
             <default>'countdown'</default>
             <description>How to display the next prayer: countdown or clock-time</description>
         </key>
-        <key name="show-seconds" type="b">
-            <summary>Show seconds</summary>
-            <default>false</default>
-            <description>Show seconds in the countdown display</description>
-        </key>
 
         <key name="use-mawaqit" type="b">
             <summary>Use Mawaqit for prayer times</summary>

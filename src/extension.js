@@ -31,19 +31,19 @@ class Menu extends PopupMenu.PopupMenu {
                 new St.Icon({
                     gicon: Gio.icon_new_for_string(Menu.iconsPath + "/" + prayer.id + ".svg"),
                     icon_size: 20,
-                })
+                }),
             );
             menuItem.add_child(
                 new St.Label({
                     text: prayer.name,
                     style_class: "prayer-name",
-                })
+                }),
             );
             menuItem.add_child(new St.Widget({ x_expand: true }));
             menuItem.add_child(
                 new St.Label({
                     text: times[prayer.id].format(timeFormat),
-                })
+                }),
             );
 
             this.addMenuItem(menuItem);
@@ -74,17 +74,12 @@ class IndicatorClass extends PanelMenu.Button {
         this.indicatorText.set_text(text);
     }
 
-    setTimeLeftText(nextName, minutesToNext, showSeconds) {
+    setTimeLeftText(nextName, minutesToNext) {
         const hh = Math.floor(minutesToNext / 60)
             .toString()
             .padStart(2, "0");
         const mm = (Math.floor(minutesToNext) % 60).toString().padStart(2, "0");
-        if (showSeconds) {
-            const ss = Math.round((minutesToNext % 1) * 60).toString().padStart(2, "0");
-            this.indicatorText.set_text(`${nextName} in ${hh}:${mm}:${ss}`);
-        } else {
-            this.indicatorText.set_text(`${nextName} in ${hh}:${mm}`);
-        }
+        this.indicatorText.set_text(`${nextName} in ${hh}:${mm}`);
     }
 
     setClockTimeText(nextName, prayerTime, clockFormat) {
@@ -128,14 +123,19 @@ export default class PrayerTime extends Extension {
         if (isFriday && id === "dhuhr" && names.jummah) {
             return names.jummah;
         }
-        return names[id] || _({
-            fajr: "Fajr",
-            duha: "Duha",
-            dhuhr: "Dhuhr",
-            asr: "Asr",
-            maghrib: "Maghrib",
-            isha: "Isha",
-        }[id]);
+        return (
+            names[id] ||
+            _(
+                {
+                    fajr: "Fajr",
+                    duha: "Duha",
+                    dhuhr: "Dhuhr",
+                    asr: "Asr",
+                    maghrib: "Maghrib",
+                    isha: "Isha",
+                }[id],
+            )
+        );
     }
 
     _getClockFormat() {
@@ -183,7 +183,8 @@ export default class PrayerTime extends Extension {
             return;
         }
 
-        this._mawaqitClient.fetchPrayerTimes(this._settings.mawaqitSlug)
+        this._mawaqitClient
+            .fetchPrayerTimes(this._settings.mawaqitSlug)
             .then((times) => {
                 this._mawaqitTimes = times;
                 this._lastMawaqitRefreshDay = today;
@@ -229,9 +230,7 @@ export default class PrayerTime extends Extension {
         // Remote only, no fallback
         if (useMawaqit && !useLocal) {
             if (this._mawaqitTimes && this._mawaqitTimes.calendar) {
-                const mawaqitDateTimes = this._mawaqitClient.extractTimesForDate(
-                    this._mawaqitTimes.calendar, date.year, date.month, date.day
-                );
+                const mawaqitDateTimes = this._mawaqitClient.extractTimesForDate(this._mawaqitTimes.calendar, date.year, date.month, date.day);
                 if (mawaqitDateTimes) return mawaqitDateTimes;
             }
             return null;
@@ -245,9 +244,7 @@ export default class PrayerTime extends Extension {
         // Both: remote with local fallback
         if (useMawaqit && useLocal) {
             if (this._mawaqitTimes && this._mawaqitTimes.calendar) {
-                const mawaqitDateTimes = this._mawaqitClient.extractTimesForDate(
-                    this._mawaqitTimes.calendar, date.year, date.month, date.day
-                );
+                const mawaqitDateTimes = this._mawaqitClient.extractTimesForDate(this._mawaqitTimes.calendar, date.year, date.month, date.day);
                 if (mawaqitDateTimes) {
                     const localTimes = new CalcPrayerTimes(date, timezone, this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
                     if (this._settings.isIncludeSunnah && localTimes.duha && !mawaqitDateTimes.duha) {
@@ -289,17 +286,9 @@ export default class PrayerTime extends Extension {
 
     _updateIndicator(nextPrayer) {
         if (this._settings.displayMode === "clock-time") {
-            this._indicator.setClockTimeText(
-                nextPrayer.name,
-                this._times[this._prayers[nextPrayer.i].id],
-                this._getClockFormat()
-            );
+            this._indicator.setClockTimeText(nextPrayer.name, this._times[this._prayers[nextPrayer.i].id], this._getClockFormat());
         } else {
-            this._indicator.setTimeLeftText(
-                nextPrayer.name,
-                nextPrayer.timeLeft,
-                this._settings.showSeconds
-            );
+            this._indicator.setTimeLeftText(nextPrayer.name, nextPrayer.timeLeft);
         }
     }
 
@@ -316,14 +305,7 @@ export default class PrayerTime extends Extension {
 
         const isFriday = GLib.DateTime.new_now_local().get_day_of_week() === 5;
 
-        this._prayers = [
-            { id: "fajr", name: this._getPrayerName("fajr") },
-            ...(this._settings.isIncludeSunnah ? [{ id: "duha", name: this._getPrayerName("duha") }] : []),
-            { id: "dhuhr", name: this._getPrayerName("dhuhr", isFriday) },
-            { id: "asr", name: this._getPrayerName("asr") },
-            { id: "maghrib", name: this._getPrayerName("maghrib") },
-            { id: "isha", name: this._getPrayerName("isha") },
-        ];
+        this._prayers = [{ id: "fajr", name: this._getPrayerName("fajr") }, ...(this._settings.isIncludeSunnah ? [{ id: "duha", name: this._getPrayerName("duha") }] : []), { id: "dhuhr", name: this._getPrayerName("dhuhr", isFriday) }, { id: "asr", name: this._getPrayerName("asr") }, { id: "maghrib", name: this._getPrayerName("maghrib") }, { id: "isha", name: this._getPrayerName("isha") }];
 
         if (this._isAwaitingMawaqit()) {
             this._indicator.setText("…");
@@ -361,8 +343,7 @@ export default class PrayerTime extends Extension {
 
         this._updateIndicator(nextPrayer);
 
-        const timeoutSeconds = this._settings.showSeconds && this._settings.displayMode === "countdown" ? 1 : 60;
-        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, timeoutSeconds, () => {
+        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 60, () => {
             const currentNow = GLib.DateTime.new_now_local();
             if (currentNow.get_hour() === 0 && currentNow.get_minute() === 1) {
                 this._fetchMawaqitTimesIfNeeded();
