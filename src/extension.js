@@ -21,9 +21,7 @@ class Menu extends PopupMenu.PopupMenu {
         Menu.iconsPath = extensionPath + "/assets/icons";
     }
 
-    populate(prayers, times, clockFormat) {
-        const timeFormat = clockFormat === "12h" ? _("%l:%M %p") : _("%R");
-
+    populate(prayers, times, timeFormat) {
         for (const prayer of prayers) {
             const menuItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, activate: false, hover: false });
 
@@ -82,8 +80,7 @@ class IndicatorClass extends PanelMenu.Button {
         this.indicatorText.set_text(`${nextName} in ${hh}:${mm}`);
     }
 
-    setClockTimeText(nextName, prayerTime, clockFormat) {
-        const timeFormat = clockFormat === "12h" ? _("%l:%M %p") : _("%R");
+    setClockTimeText(nextName, prayerTime, timeFormat) {
         this.indicatorText.set_text(`${nextName} - ${prayerTime.format(timeFormat)}`);
     }
 }
@@ -284,9 +281,9 @@ export default class PrayerTime extends Extension {
         return { timeLeft: this._differenceToMinutes(timeToFajrUs), i: 0 };
     }
 
-    _updateIndicator(nextPrayer) {
+    _updateIndicator(nextPrayer, timeFormat) {
         if (this._settings.displayMode === "clock-time") {
-            this._indicator.setClockTimeText(nextPrayer.name, this._times[this._prayers[nextPrayer.i].id], this._getClockFormat());
+            this._indicator.setClockTimeText(nextPrayer.name, this._times[this._prayers[nextPrayer.i].id], timeFormat);
         } else {
             this._indicator.setTimeLeftText(nextPrayer.name, nextPrayer.timeLeft);
         }
@@ -341,7 +338,9 @@ export default class PrayerTime extends Extension {
 
         nextPrayer.name = this._prayers[nextPrayer.i].name;
 
-        this._updateIndicator(nextPrayer);
+        const timeFormat = this._settings.clockFormat === "12h" ? _("%l:%M %p") : _("%R");
+
+        this._updateIndicator(nextPrayer, timeFormat);
 
         this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 60, () => {
             const currentNow = GLib.DateTime.new_now_local();
@@ -375,7 +374,7 @@ export default class PrayerTime extends Extension {
                 nextPrayer.name = this._prayers[nextPrayer.i].name;
 
                 this._menu.removeAll();
-                this._menu.populate(this._prayers, this._times, this._getClockFormat());
+                this._menu.populate(this._prayers, this._times, timeFormat);
                 this._menu.highlightItem(nextPrayer.i);
             } else if (this._settings.reminder && nextPrayer.timeLeft <= this._settings.reminder && nextPrayer.timeLeft > this._settings.reminder - 1 && !this._reminderFired) {
                 this._reminderFired = true;
@@ -387,11 +386,11 @@ export default class PrayerTime extends Extension {
                 }
             }
 
-            this._updateIndicator(nextPrayer);
+            this._updateIndicator(nextPrayer, timeFormat);
             return GLib.SOURCE_CONTINUE;
         });
 
-        this._menu.populate(this._prayers, this._times, this._getClockFormat());
+        this._menu.populate(this._prayers, this._times, timeFormat);
         this._menu.highlightItem(nextPrayer.i);
     }
 

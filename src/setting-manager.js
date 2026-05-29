@@ -38,7 +38,6 @@ class SettingManagerClass extends GObject.Object {
         this.useLocalCalc = this._gSettings.get_boolean("use-local-calc");
         // Display group
         this.prayerNames = this._loadPrayerNames();
-        this.useAmPm = this._gSettings.get_boolean("use-am-pm");
         this.displayMode = this._gSettings.get_string("display-mode");
         // Mawaqit group
         this.useMawaqit = this._gSettings.get_boolean("use-mawaqit");
@@ -171,10 +170,6 @@ class SettingManagerClass extends GObject.Object {
         // Display group
         this._gSettingListener.prayerNames = this._gSettings.connect("changed::prayer-names", (gSetting, key) => {
             this.prayerNames = this._loadPrayerNames();
-            this._reloadExtensionMain();
-        });
-        this._gSettingListener.useAmPm = this._gSettings.connect("changed::use-am-pm", (gSetting, key) => {
-            this.useAmPm = gSetting.get_boolean(key);
             this._reloadExtensionMain();
         });
         this._gSettingListener.displayMode = this._gSettings.connect("changed::display-mode", (gSetting, key) => {

@@ -121,12 +121,6 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         group.add(displayMode);
 
-        const useAmPm = new Adw.SwitchRow({
-            title: _("Use AM/PM format"),
-            subtitle: _("Override system clock format"),
-        });
-        group.add(useAmPm);
-
         let updatingDisplay = false;
         function displayModeGSettingToUi() {
             updatingDisplay = true;
@@ -138,8 +132,6 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         displayMode.connect("notify::selected", () => {
             if (!updatingDisplay) gSettings.set_string("display-mode", displayModes[displayMode.selected].id);
         });
-
-        gSettings.bind("use-am-pm", useAmPm, "active", 0);
     }
 
     #notificationGroup(page, gSettings) {

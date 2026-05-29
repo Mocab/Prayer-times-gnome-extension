@@ -63,11 +63,6 @@
             <description>JSON object with custom names for each prayer</description>
         </key>
 
-        <key name="use-am-pm" type="b">
-            <summary>Use AM/PM format</summary>
-            <default>false</default>
-            <description>Override GNOME clock format to use AM/PM</description>
-        </key>
         <key name="display-mode" type="s">
             <summary>Display mode</summary>
             <default>'countdown'</default>
