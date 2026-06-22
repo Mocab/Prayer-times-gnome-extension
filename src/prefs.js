@@ -346,7 +346,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 label: _("Will always fall back to manual location if mawaqit fails and automatic location is disabled or unavailable."),
                 css_classes: ["dim-label"],
                 margin_top: 10,
-                margin_start: 12,
+                margin_start: 10,
                 xalign: 0,
                 wrap: true,
             }),
