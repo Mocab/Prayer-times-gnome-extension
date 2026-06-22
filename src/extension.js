@@ -21,7 +21,7 @@ export default class PrayerTime extends Extension {
     enable() {
         this._settings = new SettingManager(this.getSettings(), this.reloadMain.bind(this), this.destroyGeoclue.bind(this));
 
-        const timeFormat = this._settings.clockFormat === "12h" ? _("%l:%M %p") : _("%R");
+        const timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
         this._indicator = new Indicator(this.metadata.name, timeFormat);
         this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, timeFormat);
         this._indicator.setMenu(this._menu);
