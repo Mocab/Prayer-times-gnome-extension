@@ -342,7 +342,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
         group.add(
             new Gtk.Label({
-                label: _("Falls back to manual location if automatic location is disabled or unavailable."),
+                label: _("Will always fall back to manual location if mawaqit fails and automatic location is disabled or unavailable."),
                 css_classes: ["dim-label"],
                 margin_top: 10,
                 margin_start: 12,
