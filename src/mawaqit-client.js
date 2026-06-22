@@ -1,170 +1,89 @@
+import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import Soup from "gi://Soup";
 
-const MAWAQIT_API_BASE = "https://mawaqit.net/api/2.0";
-const MAWAQIT_WEB_BASE = "https://mawaqit.net/fr";
+import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 
 export class MawaqitClient {
-    constructor() {
-        this._session = new Soup.Session();
+    constructor(extensionName, slug) {
+        this._extensionName = extensionName;
+        this._slug = slug;
+        this._cache = null;
     }
 
-    _sendRequest(uri) {
-        return new Promise((resolve, reject) => {
-            const message = Soup.Message.new("GET", uri);
-            if (!message) {
-                reject(new Error(`Invalid URI: ${uri}`));
-                return;
+    // date = { day, month, year}
+    async fetchPrayerTimes(date) {
+        if (!this._cache) {
+            const cacheDir = Gio.File.new_for_path(`${GLib.get_user_cache_dir()}/${this._extensionName}`);
+            const file = cacheDir.get_child("mawaqit-cache.json");
+
+            try {
+                const [contents] = await file.load_contents_async(null);
+                const parsedData = JSON.parse(new TextDecoder().decode(contents));
+
+                // 30 days cache invalidation // TODO: group new_now_local
+                if (this._slug === parsedData.slug && GLib.DateTime.new_now_local().to_unix() - parsedData.last_updated_unix <= 2592000) {
+                    this._cache = parsedData;
+                }
+            } catch (e) {
+                // file doesn't exist or json is corrupted, just ignore and fetch online
             }
-            this._session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+
+            if (!this._cache) {
+                const freshCache = await this._fetchOnline();
+                this._cache = freshCache;
                 try {
-                    const bytes = session.send_and_read_finish(result);
-                    if (message.status_code !== Soup.Status.OK) {
-                        reject(new Error(`HTTP ${message.status_code} for ${uri}`));
-                        return;
-                    }
-                    resolve(new TextDecoder().decode(bytes.get_data()));
-                } catch (error) {
-                    reject(error);
-                }
-            });
-        });
-    }
-
-    async searchMosques(query) {
-        const encodedQuery = encodeURIComponent(query);
-        const uri = `${MAWAQIT_API_BASE}/mosque/search?word=${encodedQuery}&fields=slug,label,uuid,name,localisation,times,latitude,longitude`;
-        const text = await this._sendRequest(uri);
-        return JSON.parse(text) || [];
-    }
-
-    async fetchPrayerTimes(slug) {
-        const html = await this._sendRequest(`${MAWAQIT_WEB_BASE}/${slug}`);
-        return this._parseConfData(html);
-    }
-
-    _parseConfData(html) {
-        let startMarker = "var confData = ";
-        let startIndex = html.indexOf(startMarker);
-        if (startIndex === -1) {
-            startMarker = "let confData = ";
-            startIndex = html.indexOf(startMarker);
-        }
-        if (startIndex === -1) {
-            throw new Error("confData not found in page");
-        }
-
-        let braceCount = 0;
-        let inString = false;
-        let stringChar = null;
-        let escapeNext = false;
-        const jsonStart = startIndex + startMarker.length;
-
-        for (let i = jsonStart; i < html.length; i++) {
-            const char = html[i];
-
-            if (escapeNext) { escapeNext = false; continue; }
-            if (char === "\\") { escapeNext = true; continue; }
-            if (!inString && (char === '"' || char === "'")) { inString = true; stringChar = char; continue; }
-            if (inString && char === stringChar) { inString = false; stringChar = null; continue; }
-
-            if (!inString) {
-                if (char === "{") braceCount++;
-                else if (char === "}") braceCount--;
-
-                if (braceCount === 0 && i > jsonStart) {
-                    const jsonStr = html.substring(jsonStart, i + 1);
-                    try {
-                        return this._extractPrayerTimes(JSON.parse(jsonStr));
-                    } catch (error) {
-                        throw new Error(`Failed to parse confData JSON: ${error.message}`);
-                    }
+                    if (!cacheDir.query_exists(null)) cacheDir.make_directory_with_parents(null);
+                    file.replace_contents_bytes_async(new GLib.Bytes(JSON.stringify(freshCache)), null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null, (source, result) => {
+                        try {
+                            source.replace_contents_finish(result);
+                        } catch (e) {
+                            console.error(_("MawaqitClient: Failed to write cache file: %s").format(e));
+                        }
+                    });
+                } catch (e) {
+                    console.error(_("MawaqitClient: Failed to create cache directory: %s").format(e));
                 }
             }
         }
 
-        throw new Error("Could not parse confData: unbalanced braces");
-    }
+        // calendar: months are 0 indexed, key string for days and prayer day format: fajr, ...extra?, shuruq?, dhuhr, asr, maghrib, isha.
+        const prayers = this._cache.calendar[date.month - 1][date.day.toString()];
+        if (prayers.length < 5) throw new Error(_("Unexpected prayer data structure or array length"));
 
-    extractTimesForDate(calendar, year, month, day) {
-        const monthData = calendar[month - 1];
-        if (!monthData) return null;
-        const dayTimes = monthData[String(day)];
-        if (!dayTimes) return null;
+        const tz = GLib.TimeZone.new_identifier(this._cache.timezone);
+        const convertToGDateTime = (prayerTimeStr) => GLib.DateTime.new(tz, date.year, date.month, date.day, +prayerTimeStr.slice(0, 2), +prayerTimeStr.slice(3, 5), 0);
 
-        const parseForDate = (timeStr) => {
-            const [hours, minutes] = timeStr.split(":").map(Number);
-            return GLib.DateTime.new_local(year, month, day, hours, minutes, 0.0);
+        return {
+            fajr: convertToGDateTime(prayers[0]),
+            duha: prayers.length >= 6 ? convertToGDateTime(prayers[prayers.length - 5]).add_minutes(15) : null,
+            dhuhr: convertToGDateTime(prayers[prayers.length - 4]),
+            asr: convertToGDateTime(prayers[prayers.length - 3]),
+            maghrib: convertToGDateTime(prayers[prayers.length - 2]),
+            isha: convertToGDateTime(prayers[prayers.length - 1]),
         };
-
-        let fajr, duha, dhuhr, asr, maghrib, isha;
-        const n = dayTimes.length;
-
-        if (n >= 6) {
-            // Format: [Fajr, ...extras..., Shuruq, Dhuhr, Asr, Maghrib, Isha]
-            // Last 5 entries are always Shuruq, Dhuhr, Asr, Maghrib, Isha
-            fajr = parseForDate(dayTimes[0]);
-            const shuruq = parseForDate(dayTimes[n - 5]);
-            duha = this._addMinutes(shuruq, 15);
-            dhuhr = parseForDate(dayTimes[n - 4]);
-            asr = parseForDate(dayTimes[n - 3]);
-            maghrib = parseForDate(dayTimes[n - 2]);
-            isha = parseForDate(dayTimes[n - 1]);
-        } else if (n === 5) {
-            fajr = parseForDate(dayTimes[0]);
-            dhuhr = parseForDate(dayTimes[1]);
-            asr = parseForDate(dayTimes[2]);
-            maghrib = parseForDate(dayTimes[3]);
-            isha = parseForDate(dayTimes[4]);
-            duha = null;
-        } else {
-            return null;
-        }
-
-        return { fajr, duha, dhuhr, asr, maghrib, isha, source: "mawaqit" };
     }
 
-    _extractPrayerTimes(confData) {
-        const times = confData.times || [];
-        const calendar = confData.calendar || [];
+    async _fetchOnline() {
+        const session = new Soup.Session();
+        const message = Soup.Message.new("GET", `https://mawaqit.net/en/${this._slug}`);
+        if (!message) throw new Error(_("Invalid Mawaqit mosque URL slug."));
 
-        let fajr, duha, dhuhr, asr, maghrib, isha;
-        const n = times.length;
+        const bytes = await session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null);
+        if (message.get_status() !== Soup.Status.OK) throw new Error(_("Network error: HTTP %s").format(message.get_status()));
 
-        if (n >= 6) {
-            fajr = this._parseTimeString(times[0]);
-            const shuruq = this._parseTimeString(times[n - 5]);
-            duha = this._addMinutes(shuruq, 15);
-            dhuhr = this._parseTimeString(times[n - 4]);
-            asr = this._parseTimeString(times[n - 3]);
-            maghrib = this._parseTimeString(times[n - 2]);
-            isha = this._parseTimeString(times[n - 1]);
-        } else if (n === 5) {
-            fajr = this._parseTimeString(times[0]);
-            dhuhr = this._parseTimeString(times[1]);
-            asr = this._parseTimeString(times[2]);
-            maghrib = this._parseTimeString(times[3]);
-            isha = this._parseTimeString(times[4]);
-            duha = null;
-        } else {
-            throw new Error(`Unexpected times array length: ${times.length}`);
-        }
+        const htmlString = new TextDecoder().decode(bytes.get_data());
+        const timezoneMatch = htmlString.match(/"timezone"\s*:\s*"([^"]+)"/);
+        const calendarMatch = htmlString.match(/"calendar"\s*:\s*(\[\s*\{[\s\S]*?\}\s*\])/);
+        if (!timezoneMatch || !calendarMatch) throw new Error(_("Failed to parse prayer schedule from Mawaqit."));
+        const calendar = JSON.parse(calendarMatch[1]);
+        if (calendar.length !== 12) throw new Error(_("Expected calendar to be 12 months long."));
 
-        return { fajr, duha, dhuhr, asr, maghrib, isha, source: "mawaqit", rawTimes: times, calendar };
-    }
-
-    _parseTimeString(timeStr) {
-        const [hours, minutes] = timeStr.split(":").map(Number);
-        const now = GLib.DateTime.new_now_local();
-        return GLib.DateTime.new_local(now.get_year(), now.get_month(), now.get_day_of_month(), hours, minutes, 0.0);
-    }
-
-    _addMinutes(dateTime, minutes) {
-        return dateTime.add_minutes(minutes);
-    }
-
-    destroy() {
-        this._session.abort();
-        this._session = null;
+        return {
+            slug: this._slug,
+            last_updated_unix: GLib.DateTime.new_now_local().to_unix(),
+            timezone: timezoneMatch[1].replace(/\\\//g, "/"),
+            calendar: calendar,
+        };
     }
 }

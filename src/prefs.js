@@ -1,7 +1,7 @@
 import Adw from "gi://Adw";
-import Gtk from "gi://Gtk";
-import GLib from "gi://GLib";
 import Gio from "gi://Gio";
+import GLib from "gi://GLib";
+import Gtk from "gi://Gtk";
 import Soup from "gi://Soup";
 import { ExtensionPreferences, gettext as _ } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
@@ -9,255 +9,104 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const gSettings = this.getSettings();
 
-        // Tab 1: General
-        const generalPage = new Adw.PreferencesPage({
-            title: _("General"),
+        // tab 1: calculations
+        const calcTab = new Adw.PreferencesPage({
+            title: _("Calculations"),
             icon_name: "preferences-system-symbolic",
         });
-        window.add(generalPage);
-        this.#prayerNamesGroup(generalPage, gSettings);
-        this.#displayGroup(generalPage, gSettings);
-        this.#notificationGroup(generalPage, gSettings);
-
-        // Tab 2: Configuration
-        const calcPage = new Adw.PreferencesPage({
-            title: _("Configuration"),
-            icon_name: "system-run-symbolic",
-        });
-        window.add(calcPage);
-        this.#localCalcToggle(calcPage, gSettings);
-        this.#calcGroup(calcPage, gSettings);
-        this.#locationGroup(calcPage, gSettings);
-
-        // Tab 3: Online
-        const mawaqitPage = new Adw.PreferencesPage({
-            title: _("Online"),
-            icon_name: "network-wireless-symbolic",
-        });
-        window.add(mawaqitPage);
-        this.#mawaqitGroup(mawaqitPage, gSettings);
-    }
-
-    // ─── General Tab ───
-
-    #prayerNamesGroup(page, gSettings) {
-        const group = new Adw.PreferencesGroup({
-            title: _("Prayer Names"),
-        });
-        page.add(group);
-
-        const defaultNames = { fajr: "Fajr", duha: "Duha", dhuhr: "Dhuhr", asr: "Asr", maghrib: "Maghrib", isha: "Isha", jummah: "Jummah" };
-        const prayerIds = ["fajr", "duha", "dhuhr", "asr", "maghrib", "isha", "jummah"];
-        const prayerLabels = {
-            fajr: _("Fajr"),
-            duha: _("Duha"),
-            dhuhr: _("Dhuhr"),
-            asr: _("Asr"),
-            maghrib: _("Maghrib"),
-            isha: _("Isha"),
-            jummah: _("Jummah (Friday)"),
+        calcTab.add(this.#sourceGroup(gSettings));
+        calcTab.add(this.#locationGroup(gSettings));
+        const mawaqitGroup = this.#mawaqitGroup(gSettings);
+        calcTab.add(mawaqitGroup);
+        const syncMawaqitVisibility = () => {
+            mawaqitGroup.set_visible(gSettings.get_string("source") === "mawaqit");
         };
+        syncMawaqitVisibility();
+        gSettings.connect("changed::source", () => syncMawaqitVisibility());
+        window.add(calcTab);
 
-        const entries = {};
-        let ignoreChanges = false;
-        for (const id of prayerIds) {
-            const entry = new Adw.EntryRow({
-                title: prayerLabels[id],
-            });
-            group.add(entry);
-            entries[id] = entry;
-            entry.connect("changed", () => {
-                if (ignoreChanges) return;
-                const names = {};
-                for (const pid of prayerIds) {
-                    names[pid] = entries[pid].text || defaultNames[pid];
-                }
-                gSettings.set_string("prayer-names", JSON.stringify(names));
-            });
-        }
-
-        gSettings.connect("changed::prayer-names", () => {
-            ignoreChanges = true;
-            try {
-                const names = JSON.parse(gSettings.get_string("prayer-names"));
-                for (const id of prayerIds) {
-                    entries[id].text = names[id] || defaultNames[id];
-                }
-            } catch (e) {
-                for (const id of prayerIds) {
-                    entries[id].text = defaultNames[id];
-                }
-            }
-            ignoreChanges = false;
+        // tab 2: display & notifications
+        const displayNotificationTab = new Adw.PreferencesPage({
+            title: _("Display & Notifications"),
+            icon_name: "system-run-symbolic", // TODO: update icon
         });
-
-        // Initial load
-        try {
-            const names = JSON.parse(gSettings.get_string("prayer-names"));
-            ignoreChanges = true;
-            for (const id of prayerIds) {
-                entries[id].text = names[id] || defaultNames[id];
-            }
-            ignoreChanges = false;
-        } catch (e) {
-            // defaults already set
-        }
+        displayNotificationTab.add(this.#displayGroup(gSettings));
+        displayNotificationTab.add(this.#notificationGroup(gSettings));
+        window.add(displayNotificationTab);
     }
 
-    #displayGroup(page, gSettings) {
-        const group = new Adw.PreferencesGroup({
-            title: _("Display"),
-        });
-        page.add(group);
+    #bindMapping(gSettings, key, comboRow, mapArray) {
+        const uiSignalId = comboRow.connect("notify::selected", () => gSettings.set_string(key, mapArray[comboRow.get_selected()].id));
 
-        const displayModes = [
-            { id: "countdown", name: _("Countdown") },
-            { id: "clock-time", name: _("Prayer time") },
+        function updateUi() {
+            comboRow.block_signal_handler(uiSignalId);
+            const index = mapArray.findIndex((object) => object.id === gSettings.get_string(key));
+            comboRow.set_selected(index !== -1 ? index : 0);
+            comboRow.unblock_signal_handler(uiSignalId);
+        }
+        updateUi();
+
+        gSettings.connect(`changed::${key}`, updateUi);
+    }
+
+    // calculation tab
+
+    #sourceGroup(gSettings) {
+        const group = new Adw.PreferencesGroup({
+            title: _("Sources"),
+        });
+
+        const sources = [
+            { id: "mawaqit", name: _("Mawaqit") },
+            { id: "auto", name: _("Automatic Location") },
+            { id: "manual", name: _("Manual Location") },
         ];
-        const displayMode = new Adw.ComboRow({
-            title: _("Display mode"),
-            subtitle: _("Show countdown or prayer clock time in the top bar"),
-            model: new Gtk.StringList({ strings: displayModes.map((m) => m.name) }),
+        const sourcesRow = new Adw.ComboRow({
+            title: _("Source"),
+            model: new Gtk.StringList({ strings: sources.map((a) => a.name) }),
         });
-        group.add(displayMode);
+        group.add(sourcesRow);
+        this.#bindMapping(gSettings, "source", sourcesRow, sources);
 
-        let updatingDisplay = false;
-        function displayModeGSettingToUi() {
-            updatingDisplay = true;
-            displayMode.selected = displayModes.findIndex((m) => m.id === gSettings.get_string("display-mode"));
-            updatingDisplay = false;
-        }
-        displayModeGSettingToUi();
-        gSettings.connect("changed::display-mode", displayModeGSettingToUi);
-        displayMode.connect("notify::selected", () => {
-            if (!updatingDisplay) gSettings.set_string("display-mode", displayModes[displayMode.selected].id);
-        });
+        return group;
     }
-
-    #notificationGroup(page, gSettings) {
+    #locationGroup(gSettings) {
         const group = new Adw.PreferencesGroup({
-            title: _("Notifications"),
-        });
-        page.add(group);
-
-        const notifyPrayer = new Adw.SwitchRow({
-            title: _("Send notifications"),
-        });
-        const soundPlayer = new Adw.SwitchRow({
-            title: _("Play a sound for prayers"),
-        });
-        const reminderTimes = [
-            { value: 0, name: _("Off") },
-            { value: 5, name: _("5 minutes") },
-            { value: 10, name: _("10 minutes") },
-            { value: 15, name: _("15 minutes") },
-        ];
-        const reminderTime = new Adw.ComboRow({
-            title: _("Notify before prayer"),
-            model: new Gtk.StringList({ strings: reminderTimes.map((r) => r.name) }),
+            title: _("Location Calculations"),
         });
 
-        group.add(notifyPrayer);
-        group.add(soundPlayer);
-        group.add(reminderTime);
-        gSettings.bind("notify-prayer", notifyPrayer, "active", 0);
-        gSettings.bind("sound-player", soundPlayer, "active", 0);
-        let updatingReminder = false;
-        function reminderGSettingToUi() {
-            updatingReminder = true;
-            reminderTime.selected = reminderTimes.findIndex((object) => object.value === gSettings.get_int("reminder"));
-            updatingReminder = false;
-        }
-        reminderGSettingToUi();
-        gSettings.connect("changed::reminder", reminderGSettingToUi);
-        reminderTime.connect("notify::selected", () => {
-            if (!updatingReminder) gSettings.set_int("reminder", reminderTimes[reminderTime.selected].value);
+        const customLocationRow = new Adw.ExpanderRow({
+            title: _("Custom location"),
+            subtitle: _('Used when "manual location" is selected or if Mawaqit and/or auto location fails.'),
         });
-    }
 
-    // ─── Calculation Tab ───
-
-    #localCalcToggle(page, gSettings) {
-        const group = new Adw.PreferencesGroup({
-            title: _("Local Calculation"),
-        });
-        page.add(group);
-
-        const useLocalCalc = new Adw.SwitchRow({
-            title: _("Use local calculation"),
-            subtitle: _("Calculate prayer times based on your location"),
-        });
-        group.add(useLocalCalc);
-        gSettings.bind("use-local-calc", useLocalCalc, "active", 0);
-
-        this._localCalcToggle = useLocalCalc;
-        this._localCalcGroup = group;
-    }
-
-    #locationGroup(page, gSettings) {
-        const group = new Adw.PreferencesGroup({
-            title: _("Location"),
-        });
-        page.add(group);
-
-        const useLocalCalc = this._localCalcToggle;
-        const updateGroupSensitivity = () => {
-            group.sensitive = useLocalCalc.active;
-        };
-        updateGroupSensitivity();
-        useLocalCalc.connect("notify::active", updateGroupSensitivity);
-
-        const autoLocation = new Adw.SwitchRow({
-            title: _("Automatic"),
-        });
-        const customLocation = new Adw.ExpanderRow({
-            title: _("Custom"),
-        });
         const latitude = new Adw.SpinRow({
             title: _("Latitude"),
             digits: 4,
             adjustment: new Gtk.Adjustment({
                 lower: -90.0,
                 upper: 90.0,
-                step_increment: 0.0001,
+                step_increment: 0.001,
+                page_increment: 1,
             }),
         });
+        customLocationRow.add_row(latitude);
+        gSettings.bind("latitude", latitude, "value", Gio.SettingsBindFlags.DEFAULT);
+
         const longitude = new Adw.SpinRow({
             title: _("Longitude"),
             digits: 4,
             adjustment: new Gtk.Adjustment({
                 lower: -180.0,
                 upper: 180.0,
-                step_increment: 0.0001,
+                step_increment: 0.001,
+                page_increment: 1,
             }),
         });
+        customLocationRow.add_row(longitude);
+        gSettings.bind("longitude", longitude, "value", Gio.SettingsBindFlags.DEFAULT);
 
-        group.add(autoLocation);
-        group.add(customLocation);
-        customLocation.add_row(latitude);
-        customLocation.add_row(longitude);
-        gSettings.bind("auto-location", autoLocation, "active", 0);
-        gSettings.bind("latitude", latitude, "value", 0);
-        gSettings.bind("longitude", longitude, "value", 0);
-        function updateLocationSensitivity() {
-            customLocation.sensitive = !autoLocation.active;
-        }
-        updateLocationSensitivity();
-        autoLocation.connect("notify::active", updateLocationSensitivity);
-    }
-
-    #calcGroup(page, gSettings) {
-        const group = new Adw.PreferencesGroup({
-            title: _("Calculations"),
-        });
-        page.add(group);
-
-        const useLocalCalc = this._localCalcToggle;
-        const updateCalcSensitivity = () => {
-            group.sensitive = useLocalCalc.active;
-        };
-        updateCalcSensitivity();
-        useLocalCalc.connect("notify::active", updateCalcSensitivity);
+        group.add(customLocationRow);
 
         const presetMethods = [
             { id: "mwl", name: _("Muslim World League (London)") },
@@ -271,15 +120,17 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             { id: "russia", name: _("Spiritual Administration of Muslims of Russia") },
             { id: "custom", name: _("Custom") },
         ];
-        const presetMethod = new Adw.ComboRow({
+        const presetMethodRow = new Adw.ComboRow({
             title: _("Preset methods"),
             model: new Gtk.StringList({ strings: presetMethods.map((a) => a.name) }),
         });
-        const customMethod = new Adw.ExpanderRow({
+        group.add(presetMethodRow);
+        this.#bindMapping(gSettings, "preset-methods", presetMethodRow, presetMethods);
+        const customMethodExpander = new Adw.ExpanderRow({
             title: _("Custom methods"),
         });
         const fajrAngle = new Adw.SpinRow({
-            title: _("Fajr method"),
+            title: _("Fajr angle"),
             digits: 1,
             adjustment: new Gtk.Adjustment({
                 lower: 0,
@@ -287,8 +138,10 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 step_increment: 0.5,
             }),
         });
+        customMethodExpander.add_row(fajrAngle);
+        gSettings.bind("fajr-angle", fajrAngle, "value", Gio.SettingsBindFlags.DEFAULT);
         const ishaAngle = new Adw.SpinRow({
-            title: _("Isha method"),
+            title: _("Isha angle"),
             digits: 1,
             adjustment: new Gtk.Adjustment({
                 lower: 0,
@@ -296,391 +149,261 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 step_increment: 0.5,
             }),
         });
+        customMethodExpander.add_row(ishaAngle);
+        gSettings.bind("isha-angle", ishaAngle, "value", Gio.SettingsBindFlags.DEFAULT);
+        function updateExpanderVisibility() {
+            customMethodExpander.set_visible(presetMethods[presetMethodRow.selected]?.id === "custom");
+        }
+        updateExpanderVisibility();
+        presetMethodRow.connect("notify::selected", () => updateExpanderVisibility());
+
         const asrMethods = [
             { id: "standard", name: _("Hanbali, Maliki, Shafi") },
             { id: "hanafi", name: _("Hanafi") },
         ];
-        const asrMethod = new Adw.ComboRow({
+        const asrMethodRow = new Adw.ComboRow({
             title: _("Asr shadow method"),
             model: new Gtk.StringList({ strings: asrMethods.map((a) => a.name) }),
         });
+        group.add(asrMethodRow);
+        this.#bindMapping(gSettings, "asr-method", asrMethodRow, asrMethods);
+
         const highLatAdjustments = [
             { id: "night-middle", name: _("Middle of night") },
             { id: "night-seventh", name: _("One seventh of night") },
             { id: "angle", name: _("Angle based") },
         ];
-        const highLatAdjustment = new Adw.ComboRow({
+        const highLatAdjustmentRow = new Adw.ComboRow({
             title: _("High latitude adjustment"),
             model: new Gtk.StringList({ strings: highLatAdjustments.map((h) => h.name) }),
         });
-        const includeSunnah = new Adw.SwitchRow({
+        group.add(highLatAdjustmentRow);
+        this.#bindMapping(gSettings, "high-latitude-adjustment", highLatAdjustmentRow, highLatAdjustments);
+
+        const includeSunnahRow = new Adw.SwitchRow({
             title: _("Include sunnah prayers"),
         });
+        group.add(includeSunnahRow);
+        gSettings.bind("include-sunnah", includeSunnahRow, "active", Gio.SettingsBindFlags.DEFAULT);
 
-        group.add(presetMethod);
-        group.add(customMethod);
-        customMethod.add_row(fajrAngle);
-        customMethod.add_row(ishaAngle);
-        group.add(asrMethod);
-        group.add(highLatAdjustment);
-        group.add(includeSunnah);
-
-        let updatingFromGSettings = false;
-
-        function presetMethodGSettingToUi() {
-            updatingFromGSettings = true;
-            presetMethod.selected = presetMethods.findIndex((object) => object.id === gSettings.get_string("preset-methods"));
-            updatingFromGSettings = false;
-        }
-        presetMethodGSettingToUi();
-        gSettings.connect("changed::preset-methods", presetMethodGSettingToUi);
-        presetMethod.connect("notify::selected", () => {
-            if (!updatingFromGSettings) gSettings.set_string("preset-methods", presetMethods[presetMethod.selected].id);
-        });
-        gSettings.bind("fajr-method", fajrAngle, "value", 0);
-        gSettings.bind("isha-method", ishaAngle, "value", 0);
-        function asrMethodGSettingToUi() {
-            updatingFromGSettings = true;
-            asrMethod.selected = asrMethods.findIndex((object) => object.id === gSettings.get_string("asr-method"));
-            updatingFromGSettings = false;
-        }
-        asrMethodGSettingToUi();
-        gSettings.connect("changed::asr-method", asrMethodGSettingToUi);
-        asrMethod.connect("notify::selected", () => {
-            if (!updatingFromGSettings) gSettings.set_string("asr-method", asrMethods[asrMethod.selected].id);
-        });
-        function highLatAdjustmentGSettingToUi() {
-            updatingFromGSettings = true;
-            highLatAdjustment.selected = highLatAdjustments.findIndex((object) => object.id === gSettings.get_string("high-latitude-adjustment"));
-            updatingFromGSettings = false;
-        }
-        highLatAdjustmentGSettingToUi();
-        gSettings.connect("changed::high-latitude-adjustment", highLatAdjustmentGSettingToUi);
-        highLatAdjustment.connect("notify::selected", () => {
-            if (!updatingFromGSettings) gSettings.set_string("high-latitude-adjustment", highLatAdjustments[highLatAdjustment.selected].id);
-        });
-        function updateAngleSensitivity() {
-            customMethod.sensitive = presetMethods[presetMethod.selected].id === "custom";
-        }
-        updateAngleSensitivity();
-        presetMethod.connect("notify::selected", updateAngleSensitivity);
-        gSettings.bind("include-sunnah", includeSunnah, "active", 0);
+        return group;
     }
-
-    // ─── Online Tab ───
-
-    #mawaqitGroup(page, gSettings) {
-        const toggleGroup = new Adw.PreferencesGroup({
-            title: _("Online Prayer Times"),
+    #mawaqitGroup(gSettings) {
+        const group = new Adw.PreferencesGroup({
+            title: _("Mawaqit"),
+            description: _('Prayer data from <a href="https://mawaqit.net/">Mawaqit</a>.'),
         });
-        page.add(toggleGroup);
 
-        const useMawaqit = new Adw.SwitchRow({
-            title: _("Use Mawaqit for prayer times"),
-            subtitle: _("Choose a mosque to get its daily prayer times from mawaqit.net"),
-        });
-        toggleGroup.add(useMawaqit);
-        gSettings.bind("use-mawaqit", useMawaqit, "active", 0);
-
-        const mosqueGroup = new Adw.PreferencesGroup({
-            title: _("Mosque"),
-        });
-        page.add(mosqueGroup);
-
-        const searchRow = new Adw.EntryRow({
-            title: _("Search for a mosque"),
-        });
-        mosqueGroup.add(searchRow);
-
-        let resultRows = [];
-
-        const myMosqueRow = new Adw.ActionRow({
+        const chosenMosqueRow = new Adw.ActionRow({
             title: _("No mosque selected"),
         });
-        const refreshButton = new Gtk.Button({
-            icon_name: "view-refresh-symbolic",
+        const mosqueIcon = new Gtk.Image({
+            icon_name: "mark-location-symbolic", // TODO: use mosque icon
+            pixel_size: 26,
+        });
+        chosenMosqueRow.add_prefix(mosqueIcon);
+        group.add(chosenMosqueRow);
+        gSettings.bind("mawaqit-label", chosenMosqueRow, "title", Gio.SettingsBindFlags.GET);
+        gSettings.bind("mawaqit-slug", chosenMosqueRow, "subtitle", Gio.SettingsBindFlags.GET);
+
+        function closeSearch() {
+            searchMosquesInput.text = "";
+            clearSearchButton.visible = false;
+            searchMosquesInput.get_root().set_focus(null);
+        }
+
+        const searchMosquesInput = new Adw.EntryRow({
+            title: _("Search for a mosque"),
+        });
+        const clearSearchButton = new Gtk.Button({
+            icon_name: "edit-clear-all-symbolic",
             valign: Gtk.Align.CENTER,
-            tooltip_text: _("Refresh prayer times"),
+            has_frame: false,
+            tooltip_text: _("Clear search"),
+            focus_on_click: false,
         });
-        myMosqueRow.add_suffix(refreshButton);
-        mosqueGroup.add(myMosqueRow);
+        clearSearchButton.visible = false;
+        clearSearchButton.connect("clicked", closeSearch);
+        searchMosquesInput.add_suffix(clearSearchButton);
+        group.add(searchMosquesInput);
 
-        const timesGroup = new Adw.PreferencesGroup({
-            title: _("Prayer Times"),
+        const resultsPopover = new Gtk.Popover({
+            position: Gtk.PositionType.BOTTOM,
+            has_arrow: false,
+            autohide: false, // prevents searchMosquesInput from losing focus
         });
-        page.add(timesGroup);
-
-        const prayerIds = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
-        const prayerLabels = {
-            fajr: _("Fajr"),
-            dhuhr: _("Dhuhr"),
-            asr: _("Asr"),
-            maghrib: _("Maghrib"),
-            isha: _("Isha"),
-        };
-        const timeRows = {};
-        for (const id of prayerIds) {
-            const row = new Adw.ActionRow({
-                title: prayerLabels[id],
-            });
-            const timeLabel = new Gtk.Label({
-                label: "--:--",
-                valign: Gtk.Align.CENTER,
-            });
-            timeLabel.add_css_class("heading");
-            row.add_suffix(timeLabel);
-            timesGroup.add(row);
-            timeRows[id] = timeLabel;
-        }
-
-        myMosqueRow.visible = false;
-        timesGroup.visible = false;
-
-        const controlledGroups = [mosqueGroup, timesGroup];
-
-        function updateSensitivity() {
-            const active = useMawaqit.active;
-            for (const g of controlledGroups) {
-                g.sensitive = active;
-            }
-        }
-        updateSensitivity();
-        useMawaqit.connect("notify::active", updateSensitivity);
-
-        function displayTimes(times) {
-            if (!times || times.length < 5) return;
-            if (times.length === 6) {
-                timeRows.fajr.label = times[0];
-                timeRows.dhuhr.label = times[2];
-                timeRows.asr.label = times[3];
-                timeRows.maghrib.label = times[4];
-                timeRows.isha.label = times[5];
-            } else {
-                timeRows.fajr.label = times[0];
-                timeRows.dhuhr.label = times[1];
-                timeRows.asr.label = times[2];
-                timeRows.maghrib.label = times[3];
-                timeRows.isha.label = times[4];
-            }
-            timesGroup.visible = true;
-        }
-
-        function selectMosque(mosque) {
-            gSettings.set_string("mawaqit-slug", mosque.slug);
-            gSettings.set_string("mawaqit-label", mosque.label || mosque.name);
-            myMosqueRow.title = mosque.label || mosque.name;
-            myMosqueRow.subtitle = mosque.localisation || "";
-            myMosqueRow.visible = true;
-            displayTimes(mosque.times);
-            searchRow.text = "";
-            clearResults();
-        }
+        resultsPopover.set_parent(searchMosquesInput);
+        resultsPopover.connect("map", (popover) => popover.set_size_request(popover.get_parent().get_width(), -1));
+        const resultsList = new Gtk.ListBox({
+            selection_mode: Gtk.SelectionMode.NONE,
+            hexpand: true,
+            css_classes: ["menu"],
+        });
+        resultsList.set_can_focus(false);
+        resultsPopover.set_child(resultsList);
 
         function clearResults() {
-            for (const row of resultRows) {
-                mosqueGroup.remove(row);
+            let child;
+            while ((child = resultsList.get_first_child())) {
+                resultsList.remove(child);
             }
-            resultRows = [];
         }
 
-        const currentSlug = gSettings.get_string("mawaqit-slug");
-        const currentLabel = gSettings.get_string("mawaqit-label");
-        if (currentSlug) {
-            myMosqueRow.title = currentLabel || currentSlug;
-            myMosqueRow.visible = true;
-            this._fetchMosqueTimes(currentSlug, displayTimes);
-        }
+        let searchTimeoutId = null;
+        let currentCancellable = null;
+        const soupSession = new Soup.Session();
+        const decoder = new TextDecoder("utf-8");
+        searchMosquesInput.connect("notify::text", () => {
+            clearSearchButton.visible = true;
 
-        let searchTimeout = null;
-        searchRow.connect("changed", () => {
-            if (searchTimeout) {
-                GLib.Source.remove(searchTimeout);
+            if (searchTimeoutId) {
+                GLib.Source.remove(searchTimeoutId);
+                searchTimeoutId = null;
             }
-            const query = searchRow.text.trim();
-            if (query.length < 2) {
+
+            if (currentCancellable) {
+                currentCancellable.cancel();
+            }
+            currentCancellable = new Gio.Cancellable();
+
+            const query = searchMosquesInput.text.trim();
+
+            if (query.length <= 5) {
+                resultsPopover.popdown();
                 clearResults();
                 return;
             }
-            searchTimeout = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
-                this._searchMosques(query, mosqueGroup, resultRows, selectMosque);
-                searchTimeout = null;
+
+            searchTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                const message = Soup.Message.new("GET", `https://mawaqit.net/api/2.0/mosque/search?word=${encodeURIComponent(query)}&fields=slug,label,localisation,name,times`);
+
+                soupSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, currentCancellable, (session, result) => {
+                    clearResults();
+                    try {
+                        const bytes = session.send_and_read_finish(result);
+
+                        if (message.status_code !== Soup.Status.OK) {
+                            throw new Error(_("Network transport error: %s.").replace("%s", message.status_code));
+                        }
+                        if (!bytes) {
+                            throw new Error(_("No data received from server."));
+                        }
+
+                        const data = JSON.parse(decoder.decode(bytes.toArray()));
+
+                        if (!Array.isArray(data)) {
+                            throw new Error(_("Invalid data format received: expected an array."));
+                        }
+
+                        if (data.length === 0) {
+                            const row = new Adw.ActionRow({
+                                title: _("No results found."),
+                                activatable: false,
+                            });
+                            resultsList.append(row);
+                        } else {
+                            const limit = Math.min(data.length, 9);
+                            for (let i = 0; i < limit; i++) {
+                                const mosqueTitle = data[i].label || data[i].name;
+                                const mosqueLocale = data[i].localisation || data[i].slug;
+                                const row = new Adw.ActionRow({
+                                    title: mosqueTitle,
+                                    subtitle: mosqueLocale,
+                                    activatable: true,
+                                });
+                                row.connect("activated", () => {
+                                    gSettings.set_string("mawaqit-slug", data[i].slug);
+                                    gSettings.set_string("mawaqit-label", mosqueTitle);
+                                    closeSearch();
+                                });
+                                resultsList.append(row);
+                            }
+                        }
+                    } catch (e) {
+                        const row = new Adw.ActionRow({
+                            title: `${_("Error:")} ${e.message || e}`,
+                            activatable: false,
+                        });
+                        resultsList.append(row);
+                    }
+                    resultsPopover.popup();
+                });
+                searchTimeoutId = null;
                 return GLib.SOURCE_REMOVE;
             });
         });
 
-        refreshButton.connect("clicked", () => {
-            const slug = gSettings.get_string("mawaqit-slug");
-            if (slug) {
-                for (const id of prayerIds) timeRows[id].label = "...";
-                this._fetchMosqueTimes(slug, displayTimes);
-            }
+        const fallbackAutoLocationRow = new Adw.SwitchRow({
+            title: _("Fallback to automatic location"),
+            subtitle: _("If Mawaqit fails, fall back to automatic location."),
         });
+        group.add(fallbackAutoLocationRow);
+        gSettings.bind("fallback-auto-location", fallbackAutoLocationRow, "active", Gio.SettingsBindFlags.DEFAULT);
 
-        gSettings.connect("changed::mawaqit-slug", () => {
-            const slug = gSettings.get_string("mawaqit-slug");
-            const label = gSettings.get_string("mawaqit-label");
-            if (slug) {
-                myMosqueRow.title = label || slug;
-                myMosqueRow.visible = true;
-                this._fetchMosqueTimes(slug, displayTimes);
-            } else {
-                myMosqueRow.visible = false;
-                timesGroup.visible = false;
-            }
-        });
+        group.add(
+            new Gtk.Label({
+                label: _("Falls back to manual location if automatic location is disabled or unavailable."),
+                css_classes: ["dim-label"],
+                margin_top: 10,
+                margin_start: 12,
+                xalign: 0,
+                wrap: true,
+            }),
+        );
 
-        // Credits
-        const logoPath = this.dir.get_child("assets").get_child("mawaqit-logo.png").get_path();
-        const creditsBox = new Gtk.Box({
-            orientation: Gtk.Orientation.HORIZONTAL,
-            spacing: 12,
-            margin_top: 24,
-            margin_bottom: 12,
-            halign: Gtk.Align.CENTER,
-        });
-        const logoPicture = new Gtk.Picture({
-            file: Gio.File.new_for_path(logoPath),
-            width_request: 42,
-            height_request: 64,
-            keep_aspect_ratio: true,
-            can_shrink: true,
-            valign: Gtk.Align.CENTER,
-        });
-        creditsBox.append(logoPicture);
-        const creditsVBox = new Gtk.Box({
-            orientation: Gtk.Orientation.VERTICAL,
-            spacing: 2,
-            valign: Gtk.Align.CENTER,
-            hexpand: true,
-            width_request: 300,
-        });
-        const creditsTitle = new Gtk.Label({
-            label: _('Prayer times provided by <a href="https://mawaqit.net/fr/">Mawaqit</a>'),
-            use_markup: true,
-            xalign: 0,
-            halign: Gtk.Align.START,
-            wrap: true,
-        });
-        creditsTitle.add_css_class("heading");
-        const creditsSubtitle = new Gtk.Label({
-            label: _("Data sourced from the Mawaqit API — Non-commercial use only"),
-            xalign: 0,
-            halign: Gtk.Align.START,
-            wrap: true,
-        });
-        creditsSubtitle.add_css_class("dim-label");
-        creditsSubtitle.add_css_class("caption");
-        creditsVBox.append(creditsTitle);
-        creditsVBox.append(creditsSubtitle);
-        creditsBox.append(creditsVBox);
-
-        const creditsGroup = new Adw.PreferencesGroup({});
-        creditsGroup.add(creditsBox);
-        page.add(creditsGroup);
+        return group;
     }
 
-    _searchMosques(query, searchGroup, resultRows, onSelect) {
-        if (!this._soupSession) this._soupSession = new Soup.Session();
-        const encodedQuery = encodeURIComponent(query);
-        const uri = `https://mawaqit.net/api/2.0/mosque/search?word=${encodedQuery}&fields=slug,label,localisation,name,times`;
-        const message = Soup.Message.new("GET", uri);
+    // display & notifications tab
 
-        this._soupSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
-            try {
-                const bytes = session.send_and_read_finish(result);
-                if (message.status_code !== Soup.Status.OK) return;
-
-                const data = JSON.parse(new TextDecoder().decode(bytes.get_data()));
-                if (!Array.isArray(data) || data.length === 0) return;
-
-                for (const row of resultRows) {
-                    searchGroup.remove(row);
-                }
-                resultRows.length = 0;
-
-                for (const mosque of data.slice(0, 8)) {
-                    const row = new Adw.ActionRow({
-                        title: mosque.label || mosque.name,
-                        subtitle: mosque.localisation || mosque.slug,
-                        activatable: true,
-                    });
-                    row.connect("activated", () => onSelect(mosque));
-                    searchGroup.add(row);
-                    resultRows.push(row);
-                }
-            } catch (e) {
-                console.error("Mawaqit search error:", e);
-            }
+    #displayGroup(gSettings) {
+        const group = new Adw.PreferencesGroup({
+            title: _("Display"),
         });
-    }
 
-    _fetchMosqueTimes(slug, onTimes) {
-        if (!this._soupSession) this._soupSession = new Soup.Session();
-        const message = Soup.Message.new("GET", `https://mawaqit.net/fr/${slug}`);
-
-        this._soupSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
-            try {
-                const bytes = session.send_and_read_finish(result);
-                if (message.status_code !== Soup.Status.OK) return;
-
-                const html = new TextDecoder().decode(bytes.get_data());
-                const times = this._parseConfDataTimes(html);
-                if (times) onTimes(times);
-            } catch (e) {
-                console.error("Mawaqit fetch times error:", e);
-            }
+        const displayModes = [
+            { id: "countdown", name: _("Countdown") },
+            { id: "time", name: _("Prayer time") },
+        ];
+        const displayModeRow = new Adw.ComboRow({
+            title: _("Display mode"),
+            subtitle: _("Show countdown or prayer clock time in the top bar"),
+            model: new Gtk.StringList({ strings: displayModes.map((m) => m.name) }),
         });
+        group.add(displayModeRow);
+        this.#bindMapping(gSettings, "display-mode", displayModeRow, displayModes);
+
+        return group;
     }
+    #notificationGroup(gSettings) {
+        const group = new Adw.PreferencesGroup({
+            title: _("Notifications"),
+        });
 
-    _parseConfDataTimes(html) {
-        let startMarker = "var confData = ";
-        let startIndex = html.indexOf(startMarker);
-        if (startIndex === -1) {
-            startMarker = "let confData = ";
-            startIndex = html.indexOf(startMarker);
-        }
-        if (startIndex === -1) return null;
+        const notifyPrayerRow = new Adw.SwitchRow({
+            title: _("Send notifications"),
+        });
+        group.add(notifyPrayerRow);
+        gSettings.bind("notify-prayer", notifyPrayerRow, "active", Gio.SettingsBindFlags.DEFAULT);
 
-        let braceCount = 0;
-        let inString = false;
-        let stringChar = null;
-        let escapeNext = false;
-        const jsonStart = startIndex + startMarker.length;
+        const soundPlayerRow = new Adw.SwitchRow({
+            title: _("Play takbir for prayers"),
+        });
+        group.add(soundPlayerRow);
+        gSettings.bind("sound-player", soundPlayerRow, "active", Gio.SettingsBindFlags.DEFAULT);
 
-        for (let i = jsonStart; i < html.length; i++) {
-            const char = html[i];
-            if (escapeNext) {
-                escapeNext = false;
-                continue;
-            }
-            if (char === "\\") {
-                escapeNext = true;
-                continue;
-            }
-            if (!inString && (char === '"' || char === "'")) {
-                inString = true;
-                stringChar = char;
-                continue;
-            }
-            if (inString && char === stringChar) {
-                inString = false;
-                stringChar = null;
-                continue;
-            }
-            if (!inString) {
-                if (char === "{") braceCount++;
-                else if (char === "}") braceCount--;
-                if (braceCount === 0 && i > jsonStart) {
-                    const jsonStr = html.substring(jsonStart, i + 1);
-                    try {
-                        const confData = JSON.parse(jsonStr);
-                        return confData.times || null;
-                    } catch (e) {
-                        return null;
-                    }
-                }
-            }
-        }
-        return null;
+        const reminderRow = new Adw.SpinRow({
+            title: _("Number of minutes to notify before prayer"),
+            adjustment: new Gtk.Adjustment({
+                lower: 0,
+                upper: 20,
+                step_increment: 1,
+                page_increment: 5,
+            }),
+        });
+        group.add(reminderRow);
+        gSettings.bind("reminder", reminderRow, "value", Gio.SettingsBindFlags.DEFAULT);
+
+        return group;
     }
 }

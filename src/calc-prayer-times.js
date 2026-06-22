@@ -10,10 +10,10 @@ export class CalcPrayerTimes {
     #timeEq;
     #midDayTime;
 
-    constructor(today, timezone, location, calcMethod, asrMethod, highLatAdjustment) {
+    constructor(date, timezone, location, calcMethod, asrMethod, highLatAdjustment) {
         // Global values
         this.#location = location;
-        this.#sunPos(GLib.Date.new_dmy(today.day, today.month, today.year).get_julian() + 1721425); // Add offset between Jan 1, 0001 AD (Glib julians) and Jan 1, 4713 BC (actual julian beginning)
+        this.#sunPos(GLib.Date.new_dmy(date.day, date.month, date.year).get_julian() + 1721425); // Add offset between Jan 1, 0001 AD (Glib julians) and Jan 1, 4713 BC (actual julian beginning)
         this.#midDayTime = this.#mod(12 - this.#timeEq, 24);
 
         const astronomicalHours = {};
@@ -40,7 +40,7 @@ export class CalcPrayerTimes {
         astronomicalHours.isha = this.#adjustHighLat(highLatAdjustment, astronomicalHours.isha, ishaAngle, sunsetTime, nightLen);
 
         // Store final values in this instance
-        const utcMidnight = GLib.DateTime.new_utc(today.year, today.month, today.day, 0, 0, 0.0);
+        const utcMidnight = GLib.DateTime.new_utc(date.year, date.month, date.day, 0, 0, 0.0);
         Object.entries(astronomicalHours).forEach(([key, value]) => {
             this[key] = this.#astronomicalToTime(value, utcMidnight, timezone);
         });
