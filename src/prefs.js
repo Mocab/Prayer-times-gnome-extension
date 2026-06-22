@@ -363,11 +363,11 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
         const displayModes = [
             { id: "countdown", name: _("Countdown") },
-            { id: "time", name: _("Prayer time") },
+            { id: "time", name: _("Time") },
         ];
         const displayModeRow = new Adw.ComboRow({
             title: _("Display mode"),
-            subtitle: _("Show countdown or prayer clock time in the top bar"),
+            subtitle: _("Show next prayer countdown or time in the status area."),
             model: new Gtk.StringList({ strings: displayModes.map((m) => m.name) }),
         });
         group.add(displayModeRow);
