@@ -18,9 +18,9 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         calcTab.add(this.#locationGroup(gSettings));
         const mawaqitGroup = this.#mawaqitGroup(gSettings);
         calcTab.add(mawaqitGroup);
-        const syncMawaqitVisibility = () => {
-            mawaqitGroup.set_visible(gSettings.get_string("source") === "mawaqit");
-        };
+        function syncMawaqitVisibility() {
+            mawaqitGroup.visible = gSettings.get_string("source") === "mawaqit";
+        }
         syncMawaqitVisibility();
         gSettings.connect("changed::source", () => syncMawaqitVisibility());
         window.add(calcTab);
@@ -151,8 +151,9 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         customMethodExpander.add_row(ishaAngle);
         gSettings.bind("isha-angle", ishaAngle, "value", Gio.SettingsBindFlags.DEFAULT);
+        group.add(customMethodExpander);
         function updateExpanderVisibility() {
-            customMethodExpander.set_visible(presetMethods[presetMethodRow.selected]?.id === "custom");
+            customMethodExpander.visible = presetMethods[presetMethodRow.selected].id === "custom";
         }
         updateExpanderVisibility();
         presetMethodRow.connect("notify::selected", () => updateExpanderVisibility());

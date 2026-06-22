@@ -92,14 +92,14 @@ class SettingManagerClass extends GObject.Object {
     _setupCalcMethodSettings() {
         const chooseCalcMethod = () => {
             if (this._gSettings.get_string("preset-methods") === "custom") {
-                this.calcMethod.fajr = this._gSettings.get_double("fajr-method");
-                this.calcMethod.isha = this._gSettings.get_double("isha-method");
+                this.calcMethod.fajr = this._gSettings.get_double("fajr-angle");
+                this.calcMethod.isha = this._gSettings.get_double("isha-angle");
 
-                this._connectConditional("fajr-method", "double", (fajrMethod) => (this.calcMethod.fajr = fajrMethod));
-                this._connectConditional("isha-method", "double", (ishaMethod) => (this.calcMethod.isha = ishaMethod));
+                this._connectConditional("fajr-angle", "double", (fajrAngle) => (this.calcMethod.fajr = fajrAngle));
+                this._connectConditional("isha-angle", "double", (ishaAngle) => (this.calcMethod.isha = ishaAngle));
             } else {
-                this._disconnectConditional("fajr-method");
-                this._disconnectConditional("isha-method");
+                this._disconnectConditional("fajr-angle");
+                this._disconnectConditional("isha-angle");
                 this.calcMethod.fajr = null;
                 this.calcMethod.isha = null;
             }
