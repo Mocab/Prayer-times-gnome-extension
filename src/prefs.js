@@ -369,21 +369,10 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
         const fallbackAutoLocationRow = new Adw.SwitchRow({
             title: _("Fallback to automatic location"),
-            subtitle: _("If Mawaqit fails, fall back to automatic location."),
+            subtitle: _("If Mawaqit fails, fall back to automatic location. Will always fall back to manual location if automatic location is disabled or unavailable."),
         });
         group.add(fallbackAutoLocationRow);
         gSettings.bind("fallback-auto-location", fallbackAutoLocationRow, "active", Gio.SettingsBindFlags.DEFAULT);
-
-        group.add(
-            new Gtk.Label({
-                label: _("Will always fall back to manual location if mawaqit fails and automatic location is disabled or unavailable."),
-                css_classes: ["dim-label"],
-                margin_top: 10,
-                margin_start: 10,
-                xalign: 0,
-                wrap: true,
-            }),
-        );
 
         return group;
     }
