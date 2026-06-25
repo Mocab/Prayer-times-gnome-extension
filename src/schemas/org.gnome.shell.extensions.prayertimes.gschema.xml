@@ -83,11 +83,6 @@
                 <default>''</default>
                 <description>The slug of the selected Mawaqit mosque</description>
             </key>
-            <key name="mawaqit-label" type="s">
-                <summary>Mawaqit mosque label</summary>
-                <default>''</default>
-                <description>The display name of the selected Mawaqit mosque</description>
-            </key>
             <key name="fallback-auto-location" type="b">
                 <summary>Fallback to automatic location</summary>
                 <default>true</default>

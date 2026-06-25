@@ -195,8 +195,9 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             description: _('Prayer data from <a href="https://mawaqit.net/">Mawaqit</a>.'),
         });
 
+        const getBaseMosqueTitle = () => gSettings.get_string("mawaqit-slug") || _("No mosque selected");
         const chosenMosqueRow = new Adw.ActionRow({
-            title: _("No mosque selected"),
+            title: getBaseMosqueTitle(),
         });
         const mosqueIcon = new Gtk.Image({
             icon_name: "mark-location-symbolic", // TODO: use mosque icon
@@ -204,8 +205,39 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         chosenMosqueRow.add_prefix(mosqueIcon);
         group.add(chosenMosqueRow);
-        gSettings.bind("mawaqit-label", chosenMosqueRow, "title", Gio.SettingsBindFlags.GET);
-        gSettings.bind("mawaqit-slug", chosenMosqueRow, "subtitle", Gio.SettingsBindFlags.GET);
+        const cacheDir = Gio.File.new_for_path(`${GLib.get_user_cache_dir()}/${this._extensionName}`);
+        const file = cacheDir.get_child("mawaqit-mosque-title.txt");
+        file.load_contents_async(null, (source, result) => {
+            try {
+                const [success, contents] = source.load_contents_finish(result);
+                if (success && contents) chosenMosqueRow.set_title(new TextDecoder().decode(contents));
+            } catch (e) {
+                // title isn't cached, just leave as is
+            }
+        });
+        function updateMosqueTitle(title) {
+            chosenMosqueRow.set_title(title);
+
+            cacheDir.make_directory_async(Gio.PRIORITY_DEFAULT, null, (source, result) => {
+                try {
+                    source.make_directory_finish(result);
+                } catch (e) {
+                    // if error is anything other than dir already exists then abort
+                    if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS)) {
+                        console.warn(_("Failed to create the extension cache folder: %s").format(e)(e.message));
+                        return;
+                    }
+                }
+                file.replace_contents_bytes_async(new GLib.Bytes(new TextEncoder().encode(title)), null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null, (source, result) => {
+                    try {
+                        source.replace_contents_finish(result);
+                    } catch (e) {
+                        console.warn(_("Failed to update the cached Mawaqit mosque label: %s").format(e)(e.message));
+                    }
+                });
+            });
+        }
+        this._settingsSignalId = gSettings.connect("changed::mawaqit-slug", () => updateMosqueTitle(getBaseMosqueTitle()));
 
         function closeSearch() {
             searchMosquesInput.text = "";
@@ -255,25 +287,24 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         const soupSession = new Soup.Session();
         const decoder = new TextDecoder("utf-8");
         searchMosquesInput.connect("notify::text", () => {
-            clearSearchButton.visible = true;
-
             if (searchTimeoutId) {
                 GLib.Source.remove(searchTimeoutId);
                 searchTimeoutId = null;
             }
 
-            if (currentCancellable) {
-                currentCancellable.cancel();
-            }
-            currentCancellable = new Gio.Cancellable();
+            if (currentCancellable) currentCancellable.cancel();
 
             const query = searchMosquesInput.text.trim();
+
+            clearSearchButton.visible = query.length > 0;
 
             if (query.length <= 5) {
                 resultsPopover.popdown();
                 clearResults();
                 return;
             }
+
+            currentCancellable = new Gio.Cancellable();
 
             searchTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
                 const message = Soup.Message.new("GET", `https://mawaqit.net/api/2.0/mosque/search?word=${encodeURIComponent(query)}&fields=slug,label,localisation,name,times`);
@@ -314,13 +345,15 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                                 });
                                 row.connect("activated", () => {
                                     gSettings.set_string("mawaqit-slug", data[i].slug);
-                                    gSettings.set_string("mawaqit-label", mosqueTitle);
+                                    updateMosqueTitle(mosqueTitle);
                                     closeSearch();
                                 });
                                 resultsList.append(row);
                             }
                         }
                     } catch (e) {
+                        if (e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) return;
+
                         const row = new Adw.ActionRow({
                             title: `${_("Error:")} ${e.message || e}`,
                             activatable: false,
