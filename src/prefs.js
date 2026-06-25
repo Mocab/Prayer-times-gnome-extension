@@ -205,7 +205,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         chosenMosqueRow.add_prefix(mosqueIcon);
         group.add(chosenMosqueRow);
-        const cacheDir = Gio.File.new_for_path(`${GLib.get_user_cache_dir()}/${this._extensionName}`);
+        const cacheDir = Gio.File.new_for_path(`${GLib.get_user_cache_dir()}/${this.metadata.name}`);
         const file = cacheDir.get_child("mawaqit-mosque-title.txt");
         file.load_contents_async(null, (source, result) => {
             try {
