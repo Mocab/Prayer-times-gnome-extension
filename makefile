@@ -29,5 +29,5 @@ clean:
 	@echo "Deleting $(PACK_NAME).zip"
 	@rm -f $(PACK_NAME).zip
 
-dev: clean install
+dev: install
 	dbus-run-session gnome-shell --devkit --wayland
