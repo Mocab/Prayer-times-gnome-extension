@@ -7,58 +7,58 @@ Highly customizable and efficient prayer time and athan reminder extension for G
 ![Image of the prayer panel](./.github/panel.png)
 
 > [!IMPORTANT]  
-> The displayed prayer times are only approximate and not accurate down to the second, please allow for a small margin of error.
+> The displayed prayer times are approximate and not accurate down to the second in favour of performance, please allow for a small margin of error.
 
 ## :sparkles: Features:
 
--   Location: auto detection and custom parameters
--   Calculations:
-    -   Preset and custom Fajr & Isha angles
-    -   Asr shadow lengths
-    -   High latitude Fajr and Isha correction (1/2 of night, 1/7th of night, and angle based)
-    -   Optionally include sunnah prayers (Duha)
--   Mawaqit Integration:
-    -   Fetch prayer times directly from [mawaqit.net](https://mawaqit.net/fr/) for your local mosque
-    -   Search and select the nearest mosque
-    -   Daily automatic refresh of online times
-    -   Fallback to local calculation if Mawaqit is unavailable
--   Customization:
-    -   Custom prayer names (e.g. Dhuhr → Dhor, Thuhr → الظهر)
-    -   AM/PM format override
--   Notifications:
-    -   Send notifications for prayers
-    -   Play a shorter version of an athan for prayers
-    -   Reminders before prayer time
--   Display:
-    -   Automatic clock format detection
-    -   Highlight next prayer in menu
--   Translations: Arabic
+- Sources:
+    - Manual location (latitude and longitude)
+    - Automatic location (with fallback to manual location)
+    - Mawaqit to display local mosque times (with a toggle for fallback to auto or otherwise manual location)
+- Location Calculations:
+    - Preset and custom Fajr & Isha angles
+    - Asr shadow lengths
+    - High latitude Fajr and Isha correction (1/2 of night, 1/7th of night, and angle based)
+    - Optionally include sunnah prayers (Duha)
+- Notifications:
+    - Send notifications for prayers
+    - Play a shorter version of an athan for prayers
+    - Reminders before prayer time
+- Indicator types:
+    - Countdown to next prayer
+    - Time of the next prayer
+- Translations: Arabic
 
 ### :hammer: TODO:
 
--   Allow for custom time zones
--   Add icons to notifications
--   Add support for custom times (jamaaha) (manual preset and potentially csv)
--   Add current hijri date
--   Add option to force language to Arabic
--   Add dialogs as a notification option
--   Move to TypeScript
--   Enforce Eslint
--   Reload extension when gnome settings timezone is changed
+- Add icons to notifications
+- Add support for custom times (jamaaha) (manual preset and potentially json)
+- Add current hijri date
+- Add option to force language to Arabic
+- Add dialog as a notification option
+- Move to TypeScript
+- Enforce Eslint
+- Add the current source in menu with mosque icon (if using mawaqit)
+- Add option to use iqamah for mawaqit
+- Add a time period option to display "time for x prayer"
 
 ## :handshake: Contribution:
 
-As always any contributions are very welcome, this project is lilah and will inshAllah be counted as a charity. Before making any major changes or adding big features please create a pull request detailing everything. Furthermore, any major use of AI must be declared and the code from this repo must not be used to train them.
+As always any contributions are very welcome, this project is liLah and will in sha Allah be counted as a charity. Before making any major changes or adding big features please create a pull request detailing everything. Furthermore, any major use of AI must be declared and the code from this repo must not be used for training.
 
 ### :hammer: Building:
 
+`make install`: installs the extension locally.<br>
 `make pack`: generates/builds a new extension.zip.<br>
-`make install`: creates a new extension.zip then installs it locally.<br>
-`make clean`: cleans files generated when building (including the extension.zip).<br>
-`make dev`: creates a new extension.zip, installs it then launches a nested gnome session.
+`make clean`: deletes the generated extension.zip.<br>
+`make dev`: installs the extension locally then launches a nested gnome session for testing.
 
 ### :trophy: Credits:
 
-A special thanks to [praytimes.org](https://praytimes.org/) for documenting and providing the core time calculations, [Mawaqit](https://mawaqit.net/fr/) for the mosque search API and online prayer times, and the contributors who added to this project. May god reward you all greatly for it.
+A special thanks to:
 
-###### Inspiration taken from [AthanTime](https://github.com/GoodM4ven/PATCH_EXTENSION_GNOME_athan)
+- [praytimes.org](https://praytimes.org/) for documenting and providing the core time calculations.
+- [Mawaqit](https://mawaqit.net/) for the mosque search API and online prayer times.
+- All contributors who added to this project.
+
+May God reward you all greatly for it.
