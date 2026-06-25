@@ -18,12 +18,15 @@ export class MawaqitClient {
             const file = cacheDir.get_child("mawaqit-cache.json");
 
             try {
-                const [contents] = await file.load_contents_async(null);
-                const parsedData = JSON.parse(new TextDecoder().decode(contents));
+                const [success, contents] = file.load_contents(null);
 
-                // 30 days cache invalidation // TODO: group new_now_local
-                if (this._slug === parsedData.slug && GLib.DateTime.new_now_local().to_unix() - parsedData.last_updated_unix <= 2592000) {
-                    this._cache = parsedData;
+                if (success) {
+                    const parsedData = JSON.parse(new TextDecoder().decode(contents));
+
+                    // 30 days cache invalidation // TODO: group new_now_local
+                    if (this._slug === parsedData.slug && GLib.DateTime.new_now_local().to_unix() - parsedData.last_updated_unix <= 2592000) {
+                        this._cache = parsedData;
+                    }
                 }
             } catch (e) {
                 // file doesn't exist or json is corrupted, just ignore and fetch online
@@ -31,19 +34,28 @@ export class MawaqitClient {
 
             if (!this._cache) {
                 const freshCache = await this._fetchOnline();
+
                 this._cache = freshCache;
-                try {
-                    if (!cacheDir.query_exists(null)) cacheDir.make_directory_with_parents(null);
+
+                // write to cache file for future use
+                cacheDir.make_directory_async(Gio.PRIORITY_DEFAULT, null, (source, result) => {
+                    try {
+                        source.make_directory_finish(result);
+                    } catch (e) {
+                        // if error is anything other than dir already exists then abort
+                        if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.EXISTS)) {
+                            console.error(_("MawaqitClient: Failed to write cache file: %s").format(e.message));
+                            return; // FIXME
+                        }
+                    }
                     file.replace_contents_bytes_async(new GLib.Bytes(JSON.stringify(freshCache)), null, false, Gio.FileCreateFlags.REPLACE_DESTINATION, null, (source, result) => {
                         try {
                             source.replace_contents_finish(result);
                         } catch (e) {
-                            console.error(_("MawaqitClient: Failed to write cache file: %s").format(e));
+                            console.warn(_("MawaqitClient: Failed to update the Mawaqit prayers cache: %s").format(e.message));
                         }
                     });
-                } catch (e) {
-                    console.error(_("MawaqitClient: Failed to create cache directory: %s").format(e));
-                }
+                });
             }
         }
 
