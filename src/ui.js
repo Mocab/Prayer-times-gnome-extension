@@ -74,11 +74,12 @@ class IndicatorClass extends PanelMenu.Button {
         this.indicatorText.set_text(text);
     }
 
-    setTimeLeftText(nextName, minutesToNext) {
-        const hh = Math.floor(minutesToNext / 60)
+    setTimeLeftText(nextName, secondsToNext) {
+        const totalMinutes = Math.ceil(secondsToNext / 60);
+        const hh = Math.floor(totalMinutes / 60)
             .toString()
             .padStart(2, "0");
-        const mm = (Math.floor(minutesToNext) % 60).toString().padStart(2, "0");
+        const mm = (totalMinutes % 60).toString().padStart(2, "0");
         this.text = `${nextName} in ${hh}:${mm}`;
     }
 

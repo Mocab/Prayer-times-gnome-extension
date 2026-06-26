@@ -55,7 +55,7 @@ export default class PrayerTime extends Extension {
             {
                 id: "dhuhr",
                 get name() {
-                    return GLib.DateTime.new_now_local().get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr");
+                    return GLib.DateTime.new_now_local().get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"); // TODO: optimize so it doesn't run over and over when countdown to dhuhr
                 },
                 time: null,
             },
@@ -94,45 +94,53 @@ export default class PrayerTime extends Extension {
         const todayTimes = await this._getPrayerTimes(now, permanentSourceFallbackMap, mawaqitClientHolder);
 
         // before today fajr
-        const todayFajrDiff = todayTimes.fajr.difference(now);
+        const todayFajrDiff = this._differenceToNow(todayTimes.fajr, now);
         if (todayFajrDiff > 0) {
             const yesterdayTimes = await this._getPrayerTimes(now.add_days(-1), permanentSourceFallbackMap, mawaqitClientHolder);
-            const yesterdayIshaDiff = yesterdayTimes.isha.difference(now);
+            const yesterdayIshaDiff = this._differenceToNow(yesterdayTimes.isha, now);
             // edge case when new day but yesterday isha hasn't passed
             if (yesterdayIshaDiff > 0) {
                 return {
                     prayerTimes: yesterdayTimes,
-                    nextPrayer: { timeLeft: this._differenceToMinutes(yesterdayIshaDiff), i: prayers.length - 1 },
+                    nextPrayer: { secondsLeft: this._microsecondsToSeconds(yesterdayIshaDiff), i: prayers.length - 1 },
                 };
             }
             // otherwise next is today fajr
             return {
                 prayerTimes: todayTimes,
-                nextPrayer: { timeLeft: this._differenceToMinutes(todayFajrDiff), i: 0 },
+                nextPrayer: { secondsLeft: this._microsecondsToSeconds(todayFajrDiff), i: 0 },
             };
         }
 
         // after today isha
-        const todayIshaDiff = todayTimes.isha.difference(now);
+        const todayIshaDiff = this._differenceToNow(todayTimes.isha, now);
         if (todayIshaDiff <= 0) {
             const tomorrowTimes = await this._getPrayerTimes(now.add_days(1), permanentSourceFallbackMap, mawaqitClientHolder);
             return {
                 prayerTimes: tomorrowTimes,
-                nextPrayer: { timeLeft: this._differenceToMinutes(tomorrowTimes.fajr.difference(now)), i: 0 },
+                nextPrayer: { secondsLeft: this._microsecondsToSeconds(this._differenceToNow(tomorrowTimes.fajr, now)), i: 0 },
             };
         }
 
         // between today fajr and isha
         for (let i = 1; i < prayers.length; i++) {
             const prayerTime = todayTimes[prayers[i].id];
-            const prayerDiff = prayerTime.difference(now);
+            const prayerDiff = this._differenceToNow(prayerTime, now);
             if (prayerDiff > 0) {
                 return {
                     prayerTimes: todayTimes,
-                    nextPrayer: { timeLeft: this._differenceToMinutes(prayerDiff), i },
+                    nextPrayer: { secondsLeft: this._microsecondsToSeconds(prayerDiff), i },
                 };
             }
         }
+    }
+
+    _differenceToNow(time, now = GLib.DateTime.new_now_local()) {
+        return time.difference(now);
+    }
+
+    _microsecondsToSeconds(microseconds) {
+        return Math.ceil(microseconds * 0.000001);
     }
 
     async _getPrayerTimes(dateTime, permanentSourceFallbackMap = { mawaqit: null, auto: null }, mawaqitClientHolder = { instance: null }) {
@@ -177,38 +185,39 @@ export default class PrayerTime extends Extension {
     }
 
     _countdownMain(prayers, nextPrayer) {
-        this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.timeLeft);
+        this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.secondsLeft);
 
+        let reminderSeconds = this._settings.reminder * 60;
         let isReminderFired = false;
 
         this._wallClock = new GnomeDesktop.WallClock();
         this._clockSignalId = this._wallClock.connect("notify::clock", async () => {
-            nextPrayer.timeLeft = this._differenceToMinutes(prayers[nextPrayer.i].time.difference(GLib.DateTime.new_now_local()));
+            nextPrayer.secondsLeft = this._microsecondsToSeconds(this._differenceToNow(prayers[nextPrayer.i].time));
 
-            if (nextPrayer.timeLeft <= 0) {
+            if (nextPrayer.secondsLeft <= 0) {
                 this._notifyPrayerArrival(prayers[nextPrayer.i].name);
 
                 const now = GLib.DateTime.new_now_local();
                 await this._moveToNewDay(now, prayers, nextPrayer);
-                nextPrayer.timeLeft = this._differenceToMinutes(prayers[nextPrayer.i].time.difference(now));
+                nextPrayer.secondsLeft = this._microsecondsToSeconds(this._differenceToNow(prayers[nextPrayer.i].time, now));
 
                 isReminderFired = false;
-            } else if (this._settings.reminder && nextPrayer.timeLeft <= this._settings.reminder) {
+            } else if (reminderSeconds && nextPrayer.secondsLeft <= reminderSeconds) {
                 if (!isReminderFired) {
                     this._prayerReminder(prayers[nextPrayer.i].name);
                     isReminderFired = true;
                 }
-                this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.timeLeft);
+                this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.secondsLeft);
             } else {
-                this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.timeLeft);
+                this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.secondsLeft);
             }
         });
     }
     _timeMain(prayers, nextPrayer) {
         this._indicator.setClockTimeText(prayers[nextPrayer.i].name, prayers[nextPrayer.i].time);
 
-        let delaySeconds = Math.max(Math.floor(prayers[nextPrayer.i].time.difference(GLib.DateTime.new_now_local()) * 0.000001), 1);
-        let reminderSeconds = this._settings.reminder * 60;
+        let delaySeconds = this._microsecondsToSeconds(this._differenceToNow(prayers[nextPrayer.i].time));
+        const reminderSeconds = this._settings.reminder * 60;
         let isReminderTurn = false;
         if (this._settings.reminder > 0 && delaySeconds > reminderSeconds) {
             delaySeconds -= reminderSeconds;
