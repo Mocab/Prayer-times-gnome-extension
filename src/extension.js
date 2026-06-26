@@ -158,6 +158,7 @@ export default class PrayerTime extends Extension {
                 if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.reloadMain.bind(this));
                 return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), await this._geoclueService.start(), this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
             } catch (e) {
+                if (this._geoclueService) this.destroyGeoclue(); // destroy if initialised once then failed on subsequent run
                 context.source = "manual";
                 Main.notify(this.metadata.name, _("Failed to find location automatically. Defaulting to manual calculations: %s").format(e.message));
             }
