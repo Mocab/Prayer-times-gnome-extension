@@ -36,13 +36,14 @@ export default class PrayerTime extends Extension {
         this._main();
 
         // if system sleeps then reload main
-        this._wakeProxy = Gio.DBusProxy.new_for_bus_sync(Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null, "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", null);
-        this._wakeSignalId = this._wakeProxy.connect("g-signal", (proxy, senderName, signalName, parameters) => {
-            if (signalName === "PrepareForSleep") {
-                // if not going to sleep
-                if (!parameters.recursiveUnpack()[0]) {
-                    this.reloadMain();
-                }
+        Gio.DBusProxy.new_for_bus(Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null, "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", null, (source, result) => {
+            try {
+                this._wakeProxy = Gio.DBusProxy.new_for_bus_finish(result);
+                this._wakeSignalId = this._wakeProxy.connect("g-signal", (proxy, senderName, signalName, parameters) => {
+                    if (signalName === "PrepareForSleep" && !parameters.recursiveUnpack()[0]) this.reloadMain();
+                });
+            } catch (e) {
+                Main.notify(this.metadata.name, _("Failed to detect system sleep. Prayer times won't update automatically when your computer wakes up: %s").replace("%s", e.message));
             }
         });
     }
