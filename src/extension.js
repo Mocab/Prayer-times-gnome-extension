@@ -140,51 +140,40 @@ export default class PrayerTime extends Extension {
         const date = { day: dateTimeYmd[2], month: dateTimeYmd[1], year: dateTimeYmd[0] };
 
         let activeSource = this._settings.source;
-
-        // loop to exhaust all fallbacks if necessary
-        while (true) {
-            // pick last enabled fallback
-            while (permanentSourceFallbackMap[activeSource]) {
-                activeSource = permanentSourceFallbackMap[activeSource];
-            }
-
-            switch (activeSource) {
-                case "mawaqit":
-                    try {
-                        if (!mawaqitClientHolder.instance) mawaqitClientHolder.instance = new MawaqitClient(this.metadata.name, this._settings.mawaqitSlug);
-                        return await mawaqitClientHolder.instance.fetchPrayerTimes(date);
-                    } catch (e) {
-                        const useAuto = this._settings.isFallbackAutoLocation && !permanentSourceFallbackMap["auto"];
-                        permanentSourceFallbackMap["mawaqit"] = useAuto ? "auto" : "manual";
-
-                        const msg = useAuto ? _("Failed to connect to Mawaqit. Defaulting to automatic location detection. %s") : _("Failed to connect to Mawaqit. Defaulting to manual location. %s");
-                        Main.notify(this.metadata.name, msg.replace("%s", e.message));
-
-                        activeSource = permanentSourceFallbackMap["mawaqit"];
-                    }
-                    break;
-
-                case "auto":
-                    try {
-                        if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.reloadMain.bind(this));
-                        return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), await this._geoclueService.start(), this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
-                    } catch (e) {
-                        permanentSourceFallbackMap["auto"] = "manual";
-
-                        Main.notify(this.metadata.name, _("Failed to find location automatically. Defaulting to manual calculations. %s").replace("%s", e.message));
-
-                        activeSource = "manual";
-                    }
-                    break;
-
-                default:
-                    return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
-            }
+        while (permanentSourceFallbackMap[activeSource]) {
+            activeSource = permanentSourceFallbackMap[activeSource];
         }
-    }
 
-    _differenceToMinutes(microseconds) {
-        return microseconds / 6e7;
+        // mawaqit
+        try {
+            if (activeSource === "mawaqit") {
+                if (!mawaqitClientHolder.instance) mawaqitClientHolder.instance = new MawaqitClient(this.metadata.name, this._settings.mawaqitSlug);
+                return await mawaqitClientHolder.instance.fetchPrayerTimes(date);
+            }
+        } catch (e) {
+            const useAuto = this._settings.isFallbackAutoLocation && !permanentSourceFallbackMap["auto"];
+            permanentSourceFallbackMap["mawaqit"] = useAuto ? "auto" : "manual";
+            activeSource = permanentSourceFallbackMap["mawaqit"];
+
+            const msg = useAuto ? _("Failed to connect to Mawaqit. Defaulting to automatic location detection. %s") : _("Failed to connect to Mawaqit. Defaulting to manual location. %s");
+            Main.notify(this.metadata.name, msg.replace("%s", e.message));
+        }
+
+        // auto location
+        try {
+            if (activeSource === "auto") {
+                if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.reloadMain.bind(this));
+                return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), await this._geoclueService.start(), this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+            }
+        } catch (e) {
+            permanentSourceFallbackMap["auto"] = "manual";
+            activeSource = "manual";
+
+            Main.notify(this.metadata.name, _("Failed to find location automatically. Defaulting to manual calculations. %s").replace("%s", e.message));
+        }
+
+        // manual
+        return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
     }
 
     _countdownMain(prayers, nextPrayer) {
