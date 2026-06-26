@@ -315,7 +315,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                         const bytes = session.send_and_read_finish(result);
 
                         if (message.status_code !== Soup.Status.OK) {
-                            throw new Error(_("Network transport error: %s.").replace("%s", message.status_code));
+                            throw new Error(_("Network transport error: %s.").format(message.status_code));
                         }
                         if (!bytes) {
                             throw new Error(_("No data received from server."));

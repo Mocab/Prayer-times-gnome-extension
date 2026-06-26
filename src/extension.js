@@ -42,7 +42,7 @@ export default class PrayerTime extends Extension {
                     if (signalName === "PrepareForSleep" && !parameters.recursiveUnpack()[0]) this.reloadMain();
                 });
             } catch (e) {
-                Main.notify(this.metadata.name, _("Failed to detect system sleep. Prayer times won't update automatically when your computer wakes up: %s").replace("%s", e.message));
+                Main.notify(this.metadata.name, _("Failed to detect system sleep. Prayer times won't update automatically when your computer wakes up: %s").format(e.message));
             }
         });
     }
@@ -220,7 +220,7 @@ export default class PrayerTime extends Extension {
         });
     }
     _notifyPrayerArrival(nextPrayerName) {
-        const text = _("Time for %s").replace("%s", nextPrayerName);
+        const text = _("Time for %s").format(nextPrayerName);
         this._indicator.text = text;
         if (this._settings.isNotifyPrayer) Main.notify(this.metadata.name, text);
         if (this._settings.isSoundPlayer) global.display.get_sound_player().play_from_file(this._soundFile, text, null);
@@ -246,7 +246,7 @@ export default class PrayerTime extends Extension {
         this._menu.highlightItem(nextPrayer.i);
     }
     _prayerReminder(nextPrayerName) {
-        const text = _("%s in %d minutes").replace("%s", nextPrayerName).replace("%d", this._settings.reminder);
+        const text = _("%s in %d minutes").format(nextPrayerName, this._settings.reminder);
         this._indicator.text = text;
         if (this._settings.isNotifyPrayer) Main.notify(this.metadata.name, text);
     }
