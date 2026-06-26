@@ -14,10 +14,6 @@ import { GeoclueService } from "./geoclue-service.js";
 import { CalcPrayerTimes } from "./calc-prayer-times.js";
 
 export default class PrayerTime extends Extension {
-    constructor(metadata) {
-        super(metadata);
-    }
-
     enable() {
         this._settings = new SettingManager(this.getSettings(), this.reloadMain.bind(this), this.destroyGeoclue.bind(this));
 
@@ -25,6 +21,7 @@ export default class PrayerTime extends Extension {
         this._indicator = new Indicator(this.metadata.name, timeFormat);
         this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, timeFormat);
         this._indicator.setMenu(this._menu);
+
         Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
 
         this._geoclueService = null;
@@ -32,6 +29,8 @@ export default class PrayerTime extends Extension {
         this._clockSignalId = null;
         this._prayerTimeoutId = null;
         this._soundFile = null;
+        this._wakeProxy = null;
+        this._wakeSignalId = null;
 
         this._main();
 
@@ -48,23 +47,23 @@ export default class PrayerTime extends Extension {
         });
     }
 
+    _getDhuhrName(dateTime) {
+        return dateTime.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr");
+    }
+
     async _main() {
+        const now = GLib.DateTime.new_now_local();
+
         const prayers = [
             { id: "fajr", name: _("Fajr"), time: null },
-            ...(this._settings.isIncludeSunnah ? [{ id: "duha", name: _("Duha"), time: null }] : []),
-            {
-                id: "dhuhr",
-                get name() {
-                    return GLib.DateTime.new_now_local().get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"); // TODO: optimize so it doesn't run over and over when countdown to dhuhr
-                },
-                time: null,
-            },
+            ...(this._settings.isIncludeSunnah ? [{ id: "duha", name: _("Duha"), time: null }] : []), //
+            { id: "dhuhr", name: this._getDhuhrName(now), time: null },
             { id: "asr", name: _("Asr"), time: null },
             { id: "maghrib", name: _("Maghrib"), time: null },
             { id: "isha", name: _("Isha"), time: null },
         ];
 
-        const { prayerTimes, nextPrayer } = await this._getNextPrayers(prayers);
+        const { prayerTimes, nextPrayer } = await this._getNextPrayers(now, prayers);
         for (const prayer of prayers) prayer.time = prayerTimes[prayer.id];
 
         if (this._settings.isSoundPlayer) this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
@@ -81,22 +80,15 @@ export default class PrayerTime extends Extension {
         this._menu.populate(prayers);
         this._menu.highlightItem(nextPrayer.i);
     }
-    async _getNextPrayers(prayers) {
-        const now = GLib.DateTime.new_now_local();
+    async _getNextPrayers(now, prayers) {
+        const fetchContext = { source: this._settings.source, mawaqitClient: null };
 
-        // mawaqit -> auto (if enabled) -> manual
-        const permanentSourceFallbackMap = {
-            mawaqit: null,
-            auto: null,
-        };
-        const mawaqitClientHolder = { instance: null };
-
-        const todayTimes = await this._getPrayerTimes(now, permanentSourceFallbackMap, mawaqitClientHolder);
+        const todayTimes = await this._getPrayerTimes(now, fetchContext);
 
         // before today fajr
         const todayFajrDiff = this._differenceToNow(todayTimes.fajr, now);
         if (todayFajrDiff > 0) {
-            const yesterdayTimes = await this._getPrayerTimes(now.add_days(-1), permanentSourceFallbackMap, mawaqitClientHolder);
+            const yesterdayTimes = await this._getPrayerTimes(now.add_days(-1), fetchContext);
             const yesterdayIshaDiff = this._differenceToNow(yesterdayTimes.isha, now);
             // edge case when new day but yesterday isha hasn't passed
             if (yesterdayIshaDiff > 0) {
@@ -115,7 +107,7 @@ export default class PrayerTime extends Extension {
         // after today isha
         const todayIshaDiff = this._differenceToNow(todayTimes.isha, now);
         if (todayIshaDiff <= 0) {
-            const tomorrowTimes = await this._getPrayerTimes(now.add_days(1), permanentSourceFallbackMap, mawaqitClientHolder);
+            const tomorrowTimes = await this._getPrayerTimes(now.add_days(1), fetchContext);
             return {
                 prayerTimes: tomorrowTimes,
                 nextPrayer: { secondsLeft: this._microsecondsToSeconds(this._differenceToNow(tomorrowTimes.fajr, now)), i: 0 },
@@ -124,8 +116,7 @@ export default class PrayerTime extends Extension {
 
         // between today fajr and isha
         for (let i = 1; i < prayers.length; i++) {
-            const prayerTime = todayTimes[prayers[i].id];
-            const prayerDiff = this._differenceToNow(prayerTime, now);
+            const prayerDiff = this._differenceToNow(todayTimes[prayers[i].id], now);
             if (prayerDiff > 0) {
                 return {
                     prayerTimes: todayTimes,
@@ -138,49 +129,41 @@ export default class PrayerTime extends Extension {
     _differenceToNow(time, now = GLib.DateTime.new_now_local()) {
         return time.difference(now);
     }
-
     _microsecondsToSeconds(microseconds) {
         return Math.ceil(microseconds * 0.000001);
     }
 
-    async _getPrayerTimes(dateTime, permanentSourceFallbackMap = { mawaqit: null, auto: null }, mawaqitClientHolder = { instance: null }) {
-        const dateTimeYmd = dateTime.get_ymd();
-        const date = { day: dateTimeYmd[2], month: dateTimeYmd[1], year: dateTimeYmd[0] };
+    async _getPrayerTimes(dateTime, context) {
+        const [year, month, day] = dateTime.get_ymd();
+        const date = { day, month, year };
 
-        let activeSource = this._settings.source;
-        while (permanentSourceFallbackMap[activeSource]) {
-            activeSource = permanentSourceFallbackMap[activeSource];
-        }
+        // try Mawaqit if selected
+        if (context.source === "mawaqit") {
+            try {
+                if (!context.mawaqitClient) context.mawaqitClient = new MawaqitClient(this.metadata.name, this._settings.mawaqitSlug);
+                return await context.mawaqitClient.fetchPrayerTimes(date);
+            } catch (e) {
+                const useAuto = this._settings.isFallbackAutoLocation;
 
-        // mawaqit
-        try {
-            if (activeSource === "mawaqit") {
-                if (!mawaqitClientHolder.instance) mawaqitClientHolder.instance = new MawaqitClient(this.metadata.name, this._settings.mawaqitSlug);
-                return await mawaqitClientHolder.instance.fetchPrayerTimes(date);
+                context.source = useAuto ? "auto" : "manual";
+
+                const msg = useAuto ? _("Failed to connect to Mawaqit. Defaulting to automatic location detection: %s") : _("Failed to connect to Mawaqit. Defaulting to manual location: %s");
+                Main.notify(this.metadata.name, msg.format(e.message));
             }
-        } catch (e) {
-            const useAuto = this._settings.isFallbackAutoLocation && !permanentSourceFallbackMap["auto"];
-            permanentSourceFallbackMap["mawaqit"] = useAuto ? "auto" : "manual";
-            activeSource = permanentSourceFallbackMap["mawaqit"];
-
-            const msg = useAuto ? _("Failed to connect to Mawaqit. Defaulting to automatic location detection. %s") : _("Failed to connect to Mawaqit. Defaulting to manual location. %s");
-            Main.notify(this.metadata.name, msg.replace("%s", e.message));
         }
 
-        // auto location
-        try {
-            if (activeSource === "auto") {
+        // try auto location if selected as a source, or if Mawaqit failed
+        if (context.source === "auto") {
+            try {
                 if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.reloadMain.bind(this));
                 return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), await this._geoclueService.start(), this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+            } catch (e) {
+                context.source = "manual";
+                Main.notify(this.metadata.name, _("Failed to find location automatically. Defaulting to manual calculations: %s").format(e.message));
             }
-        } catch (e) {
-            permanentSourceFallbackMap["auto"] = "manual";
-            activeSource = "manual";
-
-            Main.notify(this.metadata.name, _("Failed to find location automatically. Defaulting to manual calculations. %s").replace("%s", e.message));
         }
 
-        // manual
+        // final fallback (manual)
         return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
     }
 
@@ -192,25 +175,22 @@ export default class PrayerTime extends Extension {
 
         this._wallClock = new GnomeDesktop.WallClock();
         this._clockSignalId = this._wallClock.connect("notify::clock", async () => {
-            nextPrayer.secondsLeft = this._microsecondsToSeconds(this._differenceToNow(prayers[nextPrayer.i].time));
+            const now = GLib.DateTime.new_now_local();
+            nextPrayer.secondsLeft = this._microsecondsToSeconds(this._differenceToNow(prayers[nextPrayer.i].time, now));
 
             if (nextPrayer.secondsLeft <= 0) {
                 this._notifyPrayerArrival(prayers[nextPrayer.i].name);
 
-                const now = GLib.DateTime.new_now_local();
                 await this._moveToNewDay(now, prayers, nextPrayer);
                 nextPrayer.secondsLeft = this._microsecondsToSeconds(this._differenceToNow(prayers[nextPrayer.i].time, now));
 
                 isReminderFired = false;
-            } else if (reminderSeconds && nextPrayer.secondsLeft <= reminderSeconds) {
-                if (!isReminderFired) {
-                    this._prayerReminder(prayers[nextPrayer.i].name);
-                    isReminderFired = true;
-                }
-                this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.secondsLeft);
-            } else {
-                this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.secondsLeft);
+            } else if (reminderSeconds && nextPrayer.secondsLeft <= reminderSeconds && !isReminderFired) {
+                this._prayerReminder(prayers[nextPrayer.i].name);
+                isReminderFired = true;
             }
+
+            this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.secondsLeft);
         });
     }
     _timeMain(prayers, nextPrayer) {
@@ -219,7 +199,7 @@ export default class PrayerTime extends Extension {
         let delaySeconds = this._microsecondsToSeconds(this._differenceToNow(prayers[nextPrayer.i].time));
         const reminderSeconds = this._settings.reminder * 60;
         let isReminderTurn = false;
-        if (this._settings.reminder > 0 && delaySeconds > reminderSeconds) {
+        if (reminderSeconds > 0 && delaySeconds > reminderSeconds) {
             delaySeconds -= reminderSeconds;
             isReminderTurn = true;
         }
@@ -247,9 +227,16 @@ export default class PrayerTime extends Extension {
     async _moveToNewDay(now, prayers, nextPrayer) {
         // shift to next prayer / tomorrow
         if (nextPrayer.i === prayers.length - 1) {
-            const tomorrowTimes = await this._getPrayerTimes(now.add_days(1));
+            const tomorrow = now.add_days(1);
+
+            const fetchContext = { source: this._settings.source, mawaqitClient: null };
+            const tomorrowTimes = await this._getPrayerTimes(tomorrow, fetchContext);
+
             for (const prayer of prayers) prayer.time = tomorrowTimes[prayer.id];
             nextPrayer.i = 0;
+            const dhuhrItem = prayers.find((prayer) => prayer.id === "dhuhr");
+            if (dhuhrItem) dhuhrItem.name = this._getDhuhrName(tomorrow);
+
             this._menu.removeAll();
             this._menu.populate(prayers);
         } else {
@@ -273,11 +260,13 @@ export default class PrayerTime extends Extension {
         this._indicator.text = "...";
         this._menu.removeAll();
 
-        if (this._clockSignalId) {
-            this._wallClock.disconnect(this._clockSignalId);
-            this._clockSignalId = null;
+        if (this._wallClock) {
+            if (this._clockSignalId) {
+                this._wallClock.disconnect(this._clockSignalId);
+                this._clockSignalId = null;
+            }
+            this._wallClock = null;
         }
-        this._wallClock = null;
 
         if (this._prayerTimeoutId) {
             GLib.Source.remove(this._prayerTimeoutId);
