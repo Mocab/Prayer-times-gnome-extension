@@ -19,7 +19,17 @@ export class CalcPrayerTimes {
         const noonSunPos = this.#getSunPos();
 
         const astronomicalHours = {};
-        const calcMethodAngles = this.#getAngles(calcMethod);
+        const calcMethodAngles = {
+            mwl: { fajr: 18, isha: 17 },
+            egypt: { fajr: 19.5, isha: 17.5 },
+            france: { fajr: 12, isha: 12 },
+            isna: { fajr: 15, isha: 15 },
+            karachi: { fajr: 18, isha: 18 },
+            turkey: { fajr: 18, isha: 17 },
+            makkah: { fajr: 18.5, isha: null },
+            malaysia: { fajr: 18, isha: 18 },
+            russia: { fajr: 16, isha: 15 },
+        }[calcMethod.id] ?? { fajr: calcMethod.fajr, isha: calcMethod.isha };
 
         const sunHorizonAngle = 0.833; // angle where the middle of the sun is below the horizon
         const sunriseTime = this.#time(noonSunPos, sunHorizonAngle, -1);
@@ -37,7 +47,7 @@ export class CalcPrayerTimes {
         astronomicalHours.fajr = this.#adjustHighLat(highLatAdjustment, astronomicalHours.fajr, calcMethodAngles.fajr, sunriseTime, nightLen, -1);
         astronomicalHours.isha = this.#adjustHighLat(highLatAdjustment, astronomicalHours.isha, calcMethodAngles.isha, sunsetTime, nightLen, 1);
 
-        // Convert astronomical time to local time zone
+        // convert astronomical time to local time zone
         const utcMidnight = GLib.DateTime.new_utc(date.year, date.month, date.day, 0, 0, 0.0);
         for (const key in astronomicalHours) {
             this[key] = utcMidnight.add_minutes(Math.round((astronomicalHours[key] - this.#location.longitude / 15) * 60)).to_timezone(timezone);
@@ -78,21 +88,6 @@ export class CalcPrayerTimes {
         const denominator = this.#cosLat * this.#cos(sunPos.sunDecl);
         const diff = this.#arccos(numerator / denominator) / 15;
         return midDay + diff * direction;
-    }
-
-    #getAngles(calcMethod) {
-        const presetAngles = Object.freeze({
-            mwl: { fajr: 18, isha: 17 },
-            egypt: { fajr: 19.5, isha: 17.5 },
-            france: { fajr: 12, isha: 12 },
-            isna: { fajr: 15, isha: 15 },
-            karachi: { fajr: 18, isha: 18 },
-            turkey: { fajr: 18, isha: 17 },
-            makkah: { fajr: 18.5, isha: null },
-            malaysia: { fajr: 18, isha: 18 },
-            russia: { fajr: 16, isha: 15 },
-        });
-        return presetAngles[calcMethod.id] ?? { fajr: calcMethod.fajr, isha: calcMethod.isha };
     }
 
     #adjustHighLat(highLatAdjustment, time, angle, base, nightLen, direction = 1) {
