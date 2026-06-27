@@ -91,7 +91,8 @@ class SettingManagerClass extends GObject.Object {
 
     _setupCalcMethodSettings() {
         const chooseCalcMethod = () => {
-            if (this._gSettings.get_string("preset-methods") === "custom") {
+            this.calcMethod.id = this._gSettings.get_string("preset-methods");
+            if (this.calcMethod.id === "custom") {
                 this.calcMethod.fajr = this._gSettings.get_double("fajr-angle");
                 this.calcMethod.isha = this._gSettings.get_double("isha-angle");
 
