@@ -1,4 +1,4 @@
-PACK_NAME    := prayertimes@mocab.shell-extension
+PACK_NAME    := prayertimes@mocab
 EXT_DIR      := $(HOME)/.local/share/gnome-shell/extensions/$(PACK_NAME)
 SRC          := src
 
