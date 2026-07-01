@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
     <schemalist>
         <schema id="org.gnome.shell.extensions.prayertimes" path="/org/gnome/shell/extensions/prayertimes/">
+            <key name="version-cache" type="i">
+                <default>0</default>
+                <summary>Last run version</summary>
+                <description>Used to track if extension was updated and display release note link.</description>
+            </key>
+
             <key name="source" type="s">
                 <summary>Source</summary>
                 <default>'auto'</default>

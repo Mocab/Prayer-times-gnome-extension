@@ -4,15 +4,32 @@ import Geoclue from "gi://Geoclue";
 import GLib from "gi://GLib";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
 class SettingManagerClass extends GObject.Object {
-    _init(gSettings, reloadMain, destroyGeoclue) {
+    _init(gSettings, metadata, reloadMain, destroyGeoclue) {
         super._init();
         this._gSettings = gSettings;
         this._gSettingListener = {};
         this._desktopSettings = Gio.Settings.new("org.gnome.desktop.interface");
         this._reloadExtensionMain = reloadMain;
         this._destroyExtensionGeoClue = destroyGeoclue;
+
+        const versionCache = this._gSettings.get_int("version-cache");
+        if (versionCache !== metadata.version) {
+            const systemSource = MessageTray.getSystemSource();
+            const notification = new MessageTray.Notification({
+                source: systemSource,
+                title: metadata.name,
+                body: _("Prayer Times updated. Review changes any potential breaking changes at https://github.com/Mocab/Prayer-times-gnome-extension/releases/tag/v%d.").format(metadata.version),
+            });
+            notification.connect("destroy", (object, reason) => {
+                if (reason === MessageTray.NotificationDestroyedReason.DISMISSED) {
+                    this._gSettings.set_int("version-cache", metadata.version);
+                }
+            });
+            systemSource.addNotification(notification);
+        }
 
         this.location = { latitude: null, longitude: null };
         this.calcMethod = { id: null, fajr: null, isha: null };

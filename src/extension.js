@@ -15,7 +15,7 @@ import { CalcPrayerTimes } from "./calc-prayer-times.js";
 
 export default class PrayerTime extends Extension {
     enable() {
-        this._settings = new SettingManager(this.getSettings(), this.reloadMain.bind(this), this.destroyGeoclue.bind(this));
+        this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this), this.destroyGeoclue.bind(this));
 
         const timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
         this._indicator = new Indicator(this.metadata.name, timeFormat);
