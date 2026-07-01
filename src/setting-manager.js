@@ -21,7 +21,7 @@ class SettingManagerClass extends GObject.Object {
             const notification = new MessageTray.Notification({
                 source: systemSource,
                 title: metadata.name,
-                body: _("Prayer Times updated. Review changes any potential breaking changes at https://github.com/Mocab/Prayer-times-gnome-extension/releases/tag/v%d.").format(metadata.version),
+                body: _("Prayer Times updated. Review any potential breaking changes at https://github.com/Mocab/Prayer-times-gnome-extension/releases/tag/v%s. Close this to dismiss.").format(metadata.version),
             });
             notification.connect("destroy", (object, reason) => {
                 if (reason === MessageTray.NotificationDestroyedReason.DISMISSED) {
