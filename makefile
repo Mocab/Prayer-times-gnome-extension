@@ -30,4 +30,4 @@ clean:
 	@rm -f $(PACK_NAME).zip
 
 dev: install
-	dbus-run-session gnome-shell --devkit --wayland
+	dbus-run-session gnome-shell --devkit --wayland --wayland-display=wayland-nested-0
