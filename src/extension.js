@@ -189,9 +189,9 @@ export default class PrayerTime extends Extension {
             } else if (reminderSeconds && nextPrayer.secondsLeft <= reminderSeconds && !isReminderFired) {
                 this._prayerReminder(prayers[nextPrayer.i].name);
                 isReminderFired = true;
+            } else {
+                this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.secondsLeft);
             }
-
-            this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.secondsLeft);
         });
     }
     _timeMain(prayers, nextPrayer) {
