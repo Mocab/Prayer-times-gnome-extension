@@ -16,18 +16,27 @@ class SettingManagerClass extends GObject.Object {
         this._destroyExtensionGeoClue = destroyGeoclue;
 
         const versionCache = this._gSettings.get_int("version-cache");
-        if (versionCache !== metadata.version) {
+        if (versionCache < metadata.version) {
             const systemSource = MessageTray.getSystemSource();
+            const repoUrl = `https://github.com/Mocab/Prayer-times-gnome-extension/releases/tag/v${metadata.version}`;
+
             const notification = new MessageTray.Notification({
                 source: systemSource,
-                title: metadata.name,
-                body: _("Prayer Times updated. Review any potential breaking changes at https://github.com/Mocab/Prayer-times-gnome-extension/releases/tag/v%s. Close this to dismiss.").format(metadata.version),
+                title: _("%s Updated").format(metadata.name),
+                body: _("Extension has been updated to v%d. Please review any potential breaking changes.").format(metadata.version),
+                urgency: MessageTray.Urgency.HIGH,
             });
-            notification.connect("destroy", (object, reason) => {
-                if (reason === MessageTray.NotificationDestroyedReason.DISMISSED) {
-                    this._gSettings.set_int("version-cache", metadata.version);
-                }
+            Object.defineProperty(notification.source.policy, "forceExpanded", { get: () => true });
+
+            notification.addAction(_("Review Changes"), () => {
+                Gio.AppInfo.launch_default_for_uri(repoUrl, null);
+                this._gSettings.set_int("version-cache", metadata.version);
             });
+            notification.addAction(_("Dismiss"), () => {
+                notification.destroy();
+                this._gSettings.set_int("version-cache", metadata.version);
+            });
+
             systemSource.addNotification(notification);
         }
 
