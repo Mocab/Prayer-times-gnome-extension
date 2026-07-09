@@ -1,214 +1,375 @@
-# This file and all translations are distributed under the same license as this repository.
+# Arabic translation for Prayer Times Extension.
+# This file is distributed under the same license as the Prayer Times Extension.
+# FIRST AUTHOR mocab, 2026.
 #
-#, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: 5\n"
+"Project-Id-Version: 16\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-01 18:53+0000\n"
-"PO-Revision-Date: 2025-12-01 18:53+0000\n"
-"Last-Translator: Mocab <>\n"
-"Language-Team: Arabic <LL@li.org>\n"
+"POT-Creation-Date: 2026-07-02 15:56+0100\n"
+"PO-Revision-Date: 2026-07-02 16:00+0100\n"
+"Last-Translator: mocab\n"
+"Language-Team: \n"
 "Language: ar\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5;\n"
 
-# 12 hour time format placeholders: %l = hours, %M = minutes,  %p = am/pm
-#: extension.js:48
-msgid "%l:%M %p"
-msgstr "%l:%M %p"
+#: src/extension.js:20
+msgid "%-I:%M %p"
+msgstr "%-I:%M %p"
 
-# 24 hour time format placeholder
-#: extension.js:48
+#: src/extension.js:20
 msgid "%R"
 msgstr "%R"
 
-#: extension.js:116
-msgid "Jummah"
+#: src/extension.js:45
+#, javascript-format
+msgid ""
+"Failed to detect system sleep. Prayer times won't update automatically when "
+"your computer wakes up: %s"
+msgstr ""
+"فشل رصد وضع سكون النظام. لن تُحدّث مواقيت الصلاة تلقائيًا عند "
+"استيقاظ الحاسوب: %s"
+
+#: src/extension.js:51
+msgid "Jumaah"
 msgstr "الجمعة"
 
-#: extension.js:165
-msgid "Fajr"
-msgstr "الفجر"
-
-#: extension.js:166
-msgid "Duha"
-msgstr "الضحى"
-
-#: extension.js:167
+#: src/extension.js:51
 msgid "Dhuhr"
 msgstr "الظهر"
 
-#: extension.js:168
+#: src/extension.js:58
+msgid "Fajr"
+msgstr "الفجر"
+
+#: src/extension.js:59
+msgid "Duha"
+msgstr "الضحى"
+
+#: src/extension.js:61
 msgid "Asr"
 msgstr "العصر"
 
-#: extension.js:169
+#: src/extension.js:62
 msgid "Maghrib"
 msgstr "المغرب"
 
-#: extension.js:170
+#: src/extension.js:63
 msgid "Isha"
 msgstr "العشاء"
 
-# %s is a placeholder for the prayer name
-#: extension.js:188
+#: src/extension.js:150
+#, javascript-format
+msgid ""
+"Failed to connect to Mawaqit. Defaulting to automatic location detection: %s"
+msgstr "فشل الاتصال بمواقيت. سيتم الانتقال إلى تحديد الموقع تلقائيًا: %s"
+
+#: src/extension.js:150
+#, javascript-format
+msgid "Failed to connect to Mawaqit. Defaulting to manual location: %s"
+msgstr "فشل الاتصال بمواقيت. سيتم الاعتماد على إدخال الموقع يدويًا: %s"
+
+#: src/extension.js:163
+#, javascript-format
+msgid ""
+"Failed to find location automatically. Defaulting to manual calculations: %s"
+msgstr "فشل تحديد الموقع تلقائيًا. سيتم الاعتماد على الحسابات اليدوية: %s"
+
+#: src/extension.js:223
 #, javascript-format
 msgid "Time for %s"
-msgstr "%s وقت صلاة"
+msgstr "حان وقت %s"
 
-# %s = prayer name, %d = minute(s) left (ngettext not needed as pref.js only allows off, 5, 10, 15)
-#: extension.js:219
+#: src/extension.js:249
 #, javascript-format
 msgid "%s in %d minutes"
-msgstr "دقائق %d في %s صلاة"
+msgstr "%s خلال %d دقيقة"
 
-#: prefs.js:18
-msgid "Location"
-msgstr "المكان"
+#: src/mawaqit-client.js:47
+#, javascript-format
+msgid "MawaqitClient: Failed to write cache file: %s"
+msgstr "MawaqitClient: فشل إنشاء ملف الذاكرة المؤقت: %s"
 
-# Automatic location
-#: prefs.js:23
-msgid "Automatic"
-msgstr "التلقائي"
+#: src/mawaqit-client.js:55
+#, javascript-format
+msgid "MawaqitClient: Failed to update the Mawaqit prayers cache: %s"
+msgstr "MawaqitClient: فشل تحديث الذاكرة المؤقت لمواقيت الصلاة: %s"
 
-# Custom location
-#: prefs.js:26 prefs.js:77
-msgid "Custom"
-msgstr "محددة"
+#: src/mawaqit-client.js:64
+msgid "Unexpected prayer data structure or array length"
+msgstr "بنية غير متوقعة لبيانات الصلاة أو طول المصفوفة"
 
-#: prefs.js:29
-msgid "Latitude"
-msgstr "زاوية العرض"
+#: src/mawaqit-client.js:82
+msgid "Invalid Mawaqit mosque URL slug."
+msgstr "المُعرِّف الفريد لرابط المسجد في مواقيت غير صحيح."
 
-#: prefs.js:38
-msgid "Longitude"
-msgstr "زاوية الطول"
+#: src/mawaqit-client.js:85
+#, javascript-format
+msgid "Network error: HTTP %s"
+msgstr "خطأ في الشبكة: HTTP %s"
 
-#: prefs.js:63
+#: src/mawaqit-client.js:90
+msgid "Failed to parse prayer schedule from Mawaqit."
+msgstr "فشل تحليل جدول الصلاة من مواقيت."
+
+#: src/mawaqit-client.js:92
+msgid "Expected calendar to be 12 months long."
+msgstr "يُفترض أن يحتوي التقويم على 12 شهرًا."
+
+#: src/prefs.js:14
 msgid "Calculations"
 msgstr "الحسابات"
 
-#: prefs.js:68
+#: src/prefs.js:30
+msgid "Display & Notifications"
+msgstr "العرض والإشعارات"
+
+#: src/prefs.js:56
+msgid "Sources"
+msgstr "المصادر"
+
+#: src/prefs.js:60 src/prefs.js:194
+msgid "Mawaqit"
+msgstr "مواقيت"
+
+#: src/prefs.js:61
+msgid "Automatic Location"
+msgstr "تحديد الموقع تلقائيًا"
+
+#: src/prefs.js:62
+msgid "Manual Location"
+msgstr "إدخال الموقع يدويًا"
+
+#: src/prefs.js:65
+msgid "Source"
+msgstr "المصدر"
+
+#: src/prefs.js:75
+msgid "Location Calculations"
+msgstr "حسابات الموقع"
+
+#: src/prefs.js:79
+msgid "Custom location"
+msgstr "موقع مخصص"
+
+#: src/prefs.js:80
+msgid ""
+"Used when \"manual location\" is selected or if Mawaqit and/or auto location "
+"fails."
+msgstr ""
+"يُستخدم عند اختيار \"إدخال الموقع يدويًا\" أو في حال فشل مواقيت و/أو تحديد الموقع تلقائيًا."
+
+#: src/prefs.js:84
+msgid "Latitude"
+msgstr "خط العرض"
+
+#: src/prefs.js:97
+msgid "Longitude"
+msgstr "خط الطول"
+
+#: src/prefs.js:112
 msgid "Muslim World League (London)"
 msgstr "رابطة العالم الإسلامي (لندن)"
 
-#: prefs.js:69
+#: src/prefs.js:113
 msgid "Egyptian General Authority of Survey"
 msgstr "الهيئة المصرية العامة للمساحة"
 
-#: prefs.js:70
+#: src/prefs.js:114
 msgid "Musulmans de France"
-msgstr "مسلمون فرنسا"
+msgstr "مسلمو فرنسا"
 
-#: prefs.js:71
+#: src/prefs.js:115
 msgid "Islamic Society of North America"
-msgstr "جمعية أمريكا الشمالية الإسلامية"
+msgstr "الجمعية الإسلامية لأمريكا الشمالية"
 
-#: prefs.js:72
+#: src/prefs.js:116
 msgid "Uni of Islamic Sciences (Karachi)"
 msgstr "جامعة العلوم الإسلامية (كراتشي)"
 
-#: prefs.js:73
+#: src/prefs.js:117
 msgid "Diyanet İşleri Başkanlığı (Turkey)"
 msgstr "رئاسة الشؤون الدينية (تركيا)"
 
-#: prefs.js:74
+#: src/prefs.js:118
 msgid "Umm al-Qura Uni (Makkah)"
 msgstr "جامعة أم القرى (مكة المكرمة)"
 
-#: prefs.js:75
+#: src/prefs.js:119
 msgid "Jabatan Kemajuan Islam Malaysia"
-msgstr "وزارة التنمية الإسلامية الماليزية"
+msgstr "مصلحة التنمية الإسلامية في ماليزيا (JAKIM)"
 
-#: prefs.js:76
+#: src/prefs.js:120
 msgid "Spiritual Administration of Muslims of Russia"
-msgstr "الإدارة الروحية للمسلمين في روسيا"
+msgstr "الإدارة الدينية لمسلمي روسيا"
 
-#: prefs.js:80
+#: src/prefs.js:121
+msgid "Custom"
+msgstr "مخصص"
+
+#: src/prefs.js:124
 msgid "Preset methods"
-msgstr "الطرق المحددة مسبقاً"
+msgstr "طرق الحساب الجاهزة"
 
-#: prefs.js:84
+#: src/prefs.js:130
 msgid "Custom methods"
-msgstr "حدد طريقة خاص"
+msgstr "طرق الحساب المخصصة"
 
-#: prefs.js:87
-msgid "Fajr method"
-msgstr "طريقة الفجر"
+#: src/prefs.js:133
+msgid "Fajr angle"
+msgstr "زاوية الفجر"
 
-#: prefs.js:96
-msgid "Isha method"
-msgstr "طريقة العشاء"
+#: src/prefs.js:144
+msgid "Isha angle"
+msgstr "زاوية العشاء"
 
-#: prefs.js:105
+#: src/prefs.js:162
 msgid "Hanbali, Maliki, Shafi"
 msgstr "حنبلي، مالكي، شافعي"
 
-#: prefs.js:106
+#: src/prefs.js:163
 msgid "Hanafi"
 msgstr "حنفي"
 
-#: prefs.js:109
+#: src/prefs.js:166
 msgid "Asr shadow method"
-msgstr "نظام ظل العصر"
+msgstr "طريقة ظل العصر"
 
-#: prefs.js:113
+#: src/prefs.js:173
 msgid "Middle of night"
-msgstr "وسط الليل"
+msgstr "منتصف الليل"
 
-#: prefs.js:114
+#: src/prefs.js:174
 msgid "One seventh of night"
-msgstr "سُبع الليل"
+msgstr "سبع الليل"
 
-#: prefs.js:115
+#: src/prefs.js:175
 msgid "Angle based"
-msgstr "بحسب الزاوية"
+msgstr "قائم على الزاوية"
 
-#: prefs.js:118
+#: src/prefs.js:178
 msgid "High latitude adjustment"
-msgstr "تعديل لدرجة العرض العالية"
+msgstr "تعديل خطوط العرض العليا"
 
-#: prefs.js:122
+#: src/prefs.js:185
 msgid "Include sunnah prayers"
-msgstr "أضف صلاة السنة"
+msgstr "ضمّن صلوات السنّة"
 
-#: prefs.js:183
-msgid "Notifications"
-msgstr "التذكيرات"
-
-#: prefs.js:188
-msgid "Send notifications"
-msgstr "إرسل تذكيرات"
-
-#: prefs.js:191
-msgid "Play a sound for prayers"
-msgstr "شغل الصوت للتذكيرات"
-
-#: prefs.js:194
-msgid "Off"
-msgstr "مغلق"
-
-#: prefs.js:195
-msgid "5 minutes"
-msgstr "٥ دقائق"
-
-#: prefs.js:196
-msgid "10 minutes"
-msgstr "١٠ دقائق"
-
-#: prefs.js:197
-msgid "15 minutes"
-msgstr "١٥ دقائق"
-
-#: prefs.js:200
-msgid "Notify before prayer"
-msgstr "ذكر قبل الصلاة"
-
-# %s is an error message
-#: setting-manager.js:61
+#: src/prefs.js:195
 #, javascript-format
-msgid "Failed to connect to Geoclue, defaulting to manual location: %s"
-msgstr "لقد فشل الحصول على المكان التلقائي، سيتم التبديل إلى المكان المحدد: s%"
+msgid "Prayer data from %s."
+msgstr "بيانات الصلاة من %s."
+
+#: src/prefs.js:198
+msgid "No mosque selected"
+msgstr "لم يتم اختيار أي مسجد"
+
+#: src/prefs.js:227
+#, javascript-format
+msgid "Failed to create the extension cache folder: %s"
+msgstr "فشل إنشاء مجلد الملفات المؤقتة للإضافة: %s"
+
+#: src/prefs.js:235
+#, javascript-format
+msgid "Failed to update the cached Mawaqit mosque label: %s"
+msgstr "فشل تحديث الاسم المخزن مؤقتًا للمسجد في مواقيت: %s"
+
+#: src/prefs.js:249
+msgid "Search for a mosque"
+msgstr "ابحث عن مسجد"
+
+#: src/prefs.js:255
+msgid "Clear search"
+msgstr "مسح البحث"
+
+#: src/prefs.js:318
+#, javascript-format
+msgid "Network transport error: %s."
+msgstr "خطأ في نقل الشبكة: %s."
+
+#: src/prefs.js:321
+msgid "No data received from server."
+msgstr "لم يتم استقبال أي بيانات من الخادم."
+
+#: src/prefs.js:327
+msgid "Invalid data format received: expected an array."
+msgstr "صيغة البيانات المستلمة غير صالحة: يُتوقع وجود مصفوفة (array)."
+
+#: src/prefs.js:332
+msgid "No results found."
+msgstr "لا توجد نتائج."
+
+#: src/prefs.js:358
+msgid "Error:"
+msgstr "خطأ:"
+
+#: src/prefs.js:371
+msgid "Fallback to automatic location"
+msgstr "الرجوع التلقائي لتحديد الموقع"
+
+#: src/prefs.js:372
+msgid ""
+"If Mawaqit fails, fall back to automatic location. Will always fall back to "
+"manual location if automatic location is disabled or unavailable."
+msgstr ""
+"إذا فشل مواقيت، فسيتم الاعتماد على تحديد الموقع تلقائيًا. وسيتم الرجوع دائمًا إلى "
+"إدخال الموقع يدويًا إذا كان التحديد التلقائي معطّلًا أو غير متاح."
+
+#: src/prefs.js:384
+msgid "Display"
+msgstr "العرض"
+
+#: src/prefs.js:388
+msgid "Countdown"
+msgstr "العد التنازلي"
+
+#: src/prefs.js:389
+msgid "Time"
+msgstr "الوقت"
+
+#: src/prefs.js:392
+msgid "Display mode"
+msgstr "وضع العرض"
+
+#: src/prefs.js:393
+msgid "Show next prayer countdown or time in the status area."
+msgstr "إظهار العد التنازلي أو وقت الصلاة القادمة في منطقة الحالة."
+
+#: src/prefs.js:403
+msgid "Notifications"
+msgstr "الإشعارات"
+
+#: src/prefs.js:407
+msgid "Send notifications"
+msgstr "إرسال الإشعارات"
+
+#: src/prefs.js:413
+msgid "Play takbir for prayers"
+msgstr "تشغيل التكبير عند دخول وقت الصلاة"
+
+#: src/prefs.js:419
+msgid "Number of minutes to notify before prayer"
+msgstr "عدد الدقائق للتنبيه قبل الصلاة"
+
+#: src/setting-manager.js:25
+#, javascript-format
+msgid "%s Updated"
+msgstr "تم تحديث %s"
+
+#: src/setting-manager.js:26
+#, javascript-format
+msgid ""
+"Extension has been updated to v%d. Please review any potential breaking "
+"changes."
+msgstr ""
+"تم تحديث الإضافة إلى الإصدار v%d. يُرجى مراجعة أي تغييرات جذرية محتملة."
+
+#: src/setting-manager.js:31
+msgid "Review Changes"
+msgstr "مراجعة التغييرات"
+
+#: src/setting-manager.js:35
+msgid "Dismiss"
+msgstr "إغلاق"
