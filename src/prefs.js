@@ -192,7 +192,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
     #mawaqitGroup(gSettings) {
         const group = new Adw.PreferencesGroup({
             title: _("Mawaqit"),
-            description: _('Prayer data from <a href="https://mawaqit.net/">Mawaqit</a>.'),
+            description: _("Prayer data from %s.").format('<a href="https://mawaqit.net/">Mawaqit</a>'),
         });
 
         const getBaseMosqueTitle = () => gSettings.get_string("mawaqit-slug") || _("No mosque selected");
