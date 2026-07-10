@@ -1,72 +1,125 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist>
-    <schema id="org.gnome.shell.extensions.prayertimes" path="/org/gnome/shell/extensions/prayertimes/">
-        <key name="auto-location" type="b">
-            <summary>Automatic location</summary>
-            <default>true</default>
-            <description>Automatically detect location (latitude and longitude)</description>
-        </key>
-        <key name="latitude" type="d">
-            <summary>Latitude</summary>
-            <default>0.0000</default>
-            <range min="-90" max="90"/>
-            <description>Custom latitude (earth y axis)</description>
-        </key>
-        <key name="longitude" type="d">
-            <summary>Longitude</summary>
-            <default>0.0000</default>
-            <range min="-180" max="180"/>
-            <description>Custom longitude (earth x axis)</description>
-        </key>
+    <schemalist>
+        <schema id="org.gnome.shell.extensions.prayertimes" path="/org/gnome/shell/extensions/prayertimes/">
+            <key name="version-cache" type="i">
+                <default>0</default>
+                <summary>Last run version</summary>
+                <description>Used to track if extension was updated and display release note link.</description>
+            </key>
 
-        <key name="preset-methods" type="s">
-            <summary>Preset methods</summary>
-            <default>'mwl'</default>
-            <description>Preset Fajr and Isha calculation methods</description>
-        </key>
-        <key name="fajr-method" type="d">
-            <summary>Fajr method</summary>
-            <default>18</default>
-            <range min="0" max="20"/>
-            <description>Set a custom Fajr calculation method</description>
-        </key>
-        <key name="isha-method" type="d">
-            <summary>Isha method</summary>
-            <default>17</default>
-            <range min="0" max="20"/>
-            <description>Set a custom Isha calculation method</description>
-        </key>
-        <key name="asr-method" type="s">
-            <summary>Asr shadow method</summary>
-            <default>'standard'</default>
-            <description>Set the Asr shadow calculation method</description>
-        </key>
-        <key name="high-latitude-adjustment" type="s">
-            <summary>High latitude adjustment</summary>
-            <default>'night-middle'</default>
-            <description>Set the high latitude adjustment method</description>
-        </key>
-        <key name="include-sunnah" type="b">
-            <summary>Include sunnah prayers</summary>
-            <default>true</default>
-            <description>Show times for sunnah prayers</description>
-        </key>
+            <key name="source" type="s">
+                <summary>Source</summary>
+                <default>'auto'</default>
+                <choices>
+                    <choice value='mawaqit'/>
+                    <choice value='auto'/>
+                    <choice value='manual'/>
+                </choices>
+                <description>The method used to determine the source for prayer times.</description>
+            </key>
 
-        <key name="notify-prayer" type="b">
-            <summary>Send notifications</summary>
-            <default>true</default>
-            <description>Send a notification for reminders and prayers</description>
-        </key>
-        <key name="sound-player" type="b">
-            <summary>Play a sound for prayers</summary>
-            <default>true</default>
-            <description>Play a sound for each prayer</description>
-        </key>
-        <key name="reminder" type="i">
-            <summary>Notify before prayer</summary>
-            <default>0</default>
-            <range min="0" max="15"/>
-            <description>Number of minutes before a prayer to send a notification</description>
-        </key>
+            <key name="latitude" type="d">
+                <summary>Latitude</summary>
+                <default>0.000</default>
+                <range min="-90" max="90"/>
+                <description>Custom latitude (earth y axis)</description>
+            </key>
+            <key name="longitude" type="d">
+                <summary>Longitude</summary>
+                <default>0.000</default>
+                <range min="-180" max="180"/>
+                <description>Custom longitude (earth x axis)</description>
+            </key>
+            <key name="preset-methods" type="s">
+                <summary>Preset methods</summary>
+                <default>'mwl'</default>
+                <choices>
+                    <choice value='mwl'/>
+                    <choice value='egypt'/>
+                    <choice value='france'/>
+                    <choice value='isna'/>
+                    <choice value='karachi'/>
+                    <choice value='turkey'/>
+                    <choice value='makkah'/>
+                    <choice value='malaysia'/>
+                    <choice value='russia'/>
+                    <choice value='custom'/>
+                </choices>
+                <description>Preset Fajr and Isha calculation angles/methods</description>
+            </key>
+            <key name="fajr-angle" type="d">
+                <summary>Fajr angle</summary>
+                <default>0</default>
+                <range min="0" max="20"/>
+                <description>Set a custom Fajr calculation angle</description>
+            </key>
+            <key name="isha-angle" type="d">
+                <summary>Isha angle</summary>
+                <default>0</default>
+                <range min="0" max="20"/>
+                <description>Set a custom Isha calculation angle</description>
+            </key>
+            <key name="asr-method" type="s">
+                <summary>Asr shadow method</summary>
+                <default>'standard'</default>
+                <choices>
+                    <choice value='standard'/>
+                    <choice value='hanafi'/>
+                </choices>
+                <description>Set the Asr shadow calculation method</description>
+            </key>
+            <key name="high-latitude-adjustment" type="s">
+                <summary>High latitude adjustment</summary>
+                <default>'night-middle'</default>
+                <choices>
+                    <choice value='night-middle'/>
+                    <choice value='night-seventh'/>
+                    <choice value='angle'/>
+                </choices>
+                <description>Set the high latitude adjustment method</description>
+            </key>
+            <key name="include-sunnah" type="b">
+                <summary>Include sunnah prayers</summary>
+                <default>true</default>
+                <description>Show times for sunnah prayers</description>
+            </key>
+
+            <key name="mawaqit-slug" type="s">
+                <summary>Mawaqit mosque slug</summary>
+                <default>''</default>
+                <description>The slug of the selected Mawaqit mosque</description>
+            </key>
+            <key name="fallback-auto-location" type="b">
+                <summary>Fallback to automatic location</summary>
+                <default>true</default>
+                <description>If mawaqit is enabled and fails then fallback to automatic location detection</description>
+            </key>
+
+            <key name="display-mode" type="s">
+                <summary>Display mode</summary>
+                <default>'countdown'</default>
+                <choices>
+                    <choice value='countdown'/>
+                    <choice value='time'/>
+                </choices>
+                <description>Display next prayer as a countdown or fixed time</description>
+            </key>
+            
+            <key name="notify-prayer" type="b">
+                <summary>Send notifications</summary>
+                <default>true</default>
+                <description>Send a notification for reminders and prayers</description>
+            </key>
+            <key name="sound-player" type="b">
+                <summary>Play takbir for prayers</summary>
+                <default>true</default>
+                <description>Play a short takbir for each prayer</description>
+            </key>
+            <key name="reminder" type="i">
+                <summary>Number of minutes to notify before prayer</summary>
+                <default>0</default>
+                <range min="0" max="20"/>
+                <description>Number of minutes before a prayer to send a notification</description>
+            </key>
     </schema>
 </schemalist>

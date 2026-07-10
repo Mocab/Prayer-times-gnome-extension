@@ -4,155 +4,168 @@ import Geoclue from "gi://Geoclue";
 import GLib from "gi://GLib";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
 class SettingManagerClass extends GObject.Object {
-    _init(extension) {
+    _init(gSettings, metadata, reloadMain, destroyGeoclue) {
         super._init();
-        this._gSettings = extension.getSettings();
-        this._id = extension.metadata["settings-schema"];
-        this._name = extension.metadata.name;
-        this._reloadExtensionMain = extension._reloadMain.bind(extension);
-
-        const gnomeSettings = Gio.Settings.new("org.gnome.desktop.interface"); // TODO: is it really worth it to .connect()?
-        this.clockFormat = gnomeSettings.get_string("clock-format");
-
-        // Location group
-        this.isAutoLocation = this._gSettings.get_boolean("auto-location");
-        this.location = {};
-        if (this.isAutoLocation) {
-            this._enableGeoclue();
-        } else {
-            this.location.latitude = this._gSettings.get_double("latitude");
-            this.location.longitude = this._gSettings.get_double("longitude");
-        }
-        // Calculation group
-        this.calcMethod = {};
-        this.calcMethod.id = this._gSettings.get_string("preset-methods");
-        if (this.calcMethod.id === "custom") {
-            this.calcMethod.fajr = this._gSettings.get_double("fajr-method");
-            this.calcMethod.isha = this._gSettings.get_double("isha-method");
-        }
-
-        this.asrMethod = this._gSettings.get_string("asr-method");
-        this.highLatAdjustment = this._gSettings.get_string("high-latitude-adjustment");
-        this.isIncludeSunnah = this._gSettings.get_boolean("include-sunnah");
-        // Notification group
-        this.isNotifyPrayer = this._gSettings.get_boolean("notify-prayer");
-        this.isSoundPlayer = this._gSettings.get_boolean("sound-player");
-        this.reminder = this._gSettings.get_int("reminder");
-    }
-
-    _enableGeoclue() {
-        Geoclue.Simple.new_with_thresholds(this._id, Geoclue.AccuracyLevel.STREET, 60, 200, null, (source, result) => {
-            try {
-                this._geoclueService = Geoclue.Simple.new_with_thresholds_finish(result);
-
-                const location = this._geoclueService.get_location();
-                this.location.latitude = location.latitude;
-                this.location.longitude = location.longitude;
-
-                this._geoclueServiceListener = this._geoclueService.connect("notify::location", (response) => {
-                    const newLocation = response.get_location();
-                    this.location.latitude = newLocation.latitude;
-                    this.location.longitude = newLocation.longitude;
-                    this._reloadExtensionMain();
-                });
-            } catch (error) {
-                Main.notifyError(this._name, _("Failed to connect to Geoclue, defaulting to manual location: %s").format(error.message)); // TODO: translate this._name?
-                this._gSettings.set_value("auto-location", GLib.Variant.new_boolean(false));
-            }
-        });
-    }
-
-    connectSettings() {
+        this._gSettings = gSettings;
         this._gSettingListener = {};
-        // Location group
-        this._gSettingListener.isAutoLocation = this._gSettings.connect("changed::auto-location", (gSetting, key) => {
-            if (gSetting.get_boolean(key)) {
-                this._gSettings.disconnect(this._gSettingListener.latitude);
-                this._gSettings.disconnect(this._gSettingListener.longitude);
-                this._gSettingListener.latitude = null;
-                this._gSettingListener.longitude = null;
+        this._desktopSettings = Gio.Settings.new("org.gnome.desktop.interface");
+        this._reloadExtensionMain = reloadMain;
+        this._destroyExtensionGeoClue = destroyGeoclue;
 
-                this.location = this._enableGeoclue();
-            } else {
-                this._geoclueService.disconnect(this._geoclueServiceListener);
-                this._geoclueServiceListener = null;
-                this._geoclueService = null;
+        const versionCache = this._gSettings.get_int("version-cache");
+        if (versionCache < metadata.version) {
+            const systemSource = MessageTray.getSystemSource();
+            const repoUrl = `https://github.com/Mocab/Prayer-times-gnome-extension/releases/tag/v${metadata.version}`;
 
-                this.location.latitude = this._gSettings.get_double("latitude");
-                this.location.longitude = this._gSettings.get_double("longitude");
+            const notification = new MessageTray.Notification({
+                source: systemSource,
+                title: _("%s Updated").format(metadata.name),
+                body: _("Extension has been updated to v%d. Please review any potential breaking changes.").format(metadata.version),
+                urgency: MessageTray.Urgency.HIGH,
+            });
+            Object.defineProperty(notification.source.policy, "forceExpanded", { get: () => true });
 
-                this._gSettingListener.latitude = this._gSettings.connect("changed::latitude", (gSetting, key) => {
-                    this.location.latitude = gSetting.get_double(key);
-                    this._reloadExtensionMain();
-                });
-                this._gSettingListener.longitude = this._gSettings.connect("changed::longitude", (gSetting, key) => {
-                    this.location.longitude = gSetting.get_double(key);
-                    this._reloadExtensionMain();
-                });
-            }
+            notification.addAction(_("Review Changes"), () => {
+                Gio.AppInfo.launch_default_for_uri(repoUrl, null);
+                this._gSettings.set_int("version-cache", metadata.version);
+            });
+            notification.addAction(_("Dismiss"), () => {
+                notification.destroy();
+                this._gSettings.set_int("version-cache", metadata.version);
+            });
+
+            systemSource.addNotification(notification);
+        }
+
+        this.location = { latitude: null, longitude: null };
+        this.calcMethod = { id: null, fajr: null, isha: null };
+
+        this._bindSimpleSettings();
+        this._setupSourceSettings();
+        this._setupCalcMethodSettings();
+    }
+
+    _bindSimpleSettings() {
+        const settings = [
+            // critical settings
+            { key: "asr-method", prop: "asrMethod", type: "string", reload: true },
+            { key: "high-latitude-adjustment", prop: "highLatAdjustment", type: "string", reload: true },
+            { key: "fallback-auto-location", prop: "isFallbackAutoLocation", type: "boolean", reload: true },
+            { key: "include-sunnah", prop: "isIncludeSunnah", type: "boolean", reload: true },
+            { key: "display-mode", prop: "displayMode", type: "string", reload: true },
+            { key: "reminder", prop: "reminder", type: "int", reload: true }, // TODO: if countdown then no, for display yes
+            // ui settings
+            { key: "notify-prayer", prop: "isNotify", type: "boolean", reload: false },
+            { key: "sound-player", prop: "isSound", type: "boolean", reload: false },
+        ];
+
+        for (const { key, prop, type, reload } of settings) {
+            const getter = `get_${type}`;
+
+            this[prop] = this._gSettings[getter](key);
+
+            this._gSettingListener[prop] = this._gSettings.connect(`changed::${key}`, (gSettings) => {
+                this[prop] = gSettings[getter](key);
+                if (reload) this._reloadExtensionMain();
+            });
+        }
+
+        // TODO: only reload ui
+        this.clockFormat = this._desktopSettings.get_string("clock-format");
+        this._clockFormatListener = this._desktopSettings.connect("changed::clock-format", (gSettings, key) => {
+            this.clockFormat = gSettings.get_string(key);
+            this._reloadExtensionMain();
         });
-        // Calculation group
-        this._gSettingListener.presetAngles = this._gSettings.connect("changed::preset-methods", (gSetting, key) => {
-            this.calcMethod.id = gSetting.get_string(key);
-            if (this.calcMethod.id === "custom") {
-                this._gSettingListener.fajrMethod = this._gSettings.connect("changed::fajr-method", (gSetting, key) => {
-                    this.calcMethod.fajr = gSetting.get_double(key);
-                    this._reloadExtensionMain();
-                });
-                this._gSettingListener.ishaMethod = this._gSettings.connect("changed::isha-method", (gSetting, key) => {
-                    this.calcMethod.isha = gSetting.get_double(key);
-                    this._reloadExtensionMain();
-                });
-            } else {
-                this._gSettings.disconnect(this._gSettingListener.fajrMethod);
-                this._gSettings.disconnect(this._gSettingListener.ishaMethod);
-                this._gSettingListener.fajrMethod = null;
-                this._gSettingListener.ishaMethod = null;
+    }
 
+    _setupSourceSettings() {
+        const chooseSource = () => {
+            this.source = this._gSettings.get_string("source");
+            switch (this.source) {
+                case "mawaqit":
+                    this.mawaqitSlug = this._gSettings.get_string("mawaqit-slug");
+                    this._connectConditional("mawaqit-slug", "string", (slug) => (this.mawaqitSlug = slug));
+                    break;
+                case "auto":
+                    break;
+                default:
+                    // manual
+                    this.location.latitude = this._gSettings.get_double("latitude");
+                    this.location.longitude = this._gSettings.get_double("longitude");
+                    this._connectConditional("latitude", "double", (latitude) => (this.location.latitude = latitude));
+                    this._connectConditional("longitude", "double", (longitude) => (this.location.longitude = longitude));
+            }
+        };
+
+        chooseSource();
+
+        this._gSettingListener.source = this._gSettings.connect("changed::source", () => {
+            // clean up old conditional listeners
+            this._disconnectConditional("mawaqit-slug");
+            this._disconnectConditional("latitude");
+            this._disconnectConditional("longitude");
+
+            this._destroyExtensionGeoClue();
+
+            chooseSource();
+            this._reloadExtensionMain();
+        });
+    }
+
+    _setupCalcMethodSettings() {
+        const chooseCalcMethod = () => {
+            this.calcMethod.id = this._gSettings.get_string("preset-methods");
+            if (this.calcMethod.id === "custom") {
+                this.calcMethod.fajr = this._gSettings.get_double("fajr-angle");
+                this.calcMethod.isha = this._gSettings.get_double("isha-angle");
+
+                this._connectConditional("fajr-angle", "double", (fajrAngle) => (this.calcMethod.fajr = fajrAngle));
+                this._connectConditional("isha-angle", "double", (ishaAngle) => (this.calcMethod.isha = ishaAngle));
+            } else {
+                this._disconnectConditional("fajr-angle");
+                this._disconnectConditional("isha-angle");
                 this.calcMethod.fajr = null;
                 this.calcMethod.isha = null;
-
-                this._reloadExtensionMain();
             }
-        });
-        this._gSettingListener.asrMethod = this._gSettings.connect("changed::asr-method", (gSetting, key) => {
-            this.asrMethod = gSetting.get_string(key);
+        };
+
+        chooseCalcMethod();
+
+        this._gSettingListener.calcMethod = this._gSettings.connect("changed::preset-methods", () => {
+            chooseCalcMethod();
             this._reloadExtensionMain();
         });
-        this._gSettingListener.highLatAdjustment = this._gSettings.connect("changed::high-latitude-adjustment", (gSetting, key) => {
-            this.highLatAdjustment = gSetting.get_string(key);
-            this._reloadExtensionMain();
-        });
-        this._gSettingListener.isIncludeSunnah = this._gSettings.connect("changed::include-sunnah", (gSetting, key) => {
-            this.isIncludeSunnah = gSetting.get_string(key);
-            this._reloadExtensionMain();
-        });
-        // Notification group
-        this._gSettingListener.isNotifyPrayer = this._gSettings.connect("changed::notify-prayer", (gSetting, key) => {
-            this.isNotifyPrayer = gSetting.get_boolean(key);
-        });
-        this._gSettingListener.isSoundPlayer = this._gSettings.connect("changed::sound-player", (gSetting, key) => {
-            this.isSoundPlayer = gSetting.get_boolean(key);
-        });
-        this._gSettingListener.reminder = this._gSettings.connect("changed::reminder", (gSetting, key) => {
-            this.reminder = gSetting.get_int(key);
-        });
+    }
+
+    _connectConditional(key, type, callback) {
+        if (!this._gSettingListener[key]) {
+            this._gSettingListener[key] = this._gSettings.connect(`changed::${key}`, (gSettings) => {
+                callback(gSettings[`get_${type}`](key));
+                this._reloadExtensionMain();
+            });
+        }
+    }
+    _disconnectConditional(key) {
+        if (this._gSettingListener[key]) {
+            this._gSettings.disconnect(this._gSettingListener[key]);
+            this._gSettingListener[key] = null;
+        }
     }
 
     destroy() {
-        for (let listener in this._gSettingListener) {
-            if (listener) {
-                this._gSettings.disconnect(listener);
-                listener = null;
-            }
+        if (this._clockFormatListener) {
+            this._desktopSettings.disconnect(this._clockFormatListener);
+            this._clockFormatListener = null;
         }
-        if (this._geoclueService) {
-            this._geoclueService.disconnect(this._geoclueServiceListener);
-            this._geoclueServiceListener = null;
-            this._geoclueService = null;
+        this._desktopSettings = null;
+
+        for (const key in this._gSettingListener) {
+            if (this._gSettingListener[key]) this._gSettings.disconnect(this._gSettingListener[key]);
         }
+        this._gSettingListener = null;
         this._gSettings = null;
     }
 }
