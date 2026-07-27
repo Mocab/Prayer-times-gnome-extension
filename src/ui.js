@@ -62,8 +62,8 @@ export class Menu extends PopupMenu.PopupMenu {
         this.highlightItem(schedule.nextPrayerI);
     }
 
-    removeAll() {
-        super.removeAll();
+    destroy() {
+        this.removeAll();
         this._currentActiveIndex = null;
     }
 }

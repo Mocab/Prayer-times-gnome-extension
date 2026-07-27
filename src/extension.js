@@ -218,7 +218,7 @@ export default class PrayerTime extends Extension {
     }
     _destroyMain() {
         this._indicator.text = "...";
-        this._menu.removeAll();
+        this._menu.destroy();
 
         if (this._clockSignalId) {
             this._wallClock.disconnect(this._clockSignalId);
