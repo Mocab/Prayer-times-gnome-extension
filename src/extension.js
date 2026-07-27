@@ -17,21 +17,26 @@ export default class PrayerTime extends Extension {
     enable() {
         this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this), this.destroyGeoclue.bind(this));
 
-        const timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
-        this._indicator = new Indicator(this.metadata.name, timeFormat);
-        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, timeFormat);
+        this._timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
+        this._indicator = new Indicator(this.metadata.name);
+        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._timeFormat);
         this._indicator.setMenu(this._menu);
 
         Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
 
         this._geoclueService = null;
-        this._wallClock = null;
         this._clockSignalId = null;
         this._prayerTimeoutId = null;
         this._soundFile = null;
         this._wakeProxy = null;
         this._wakeSignalId = null;
 
+        this._wallClock = new GnomeDesktop.WallClock();
+
+        this._schedule = {
+            prayers: null,
+            nextPrayerI: null,
+        };
         this._main();
 
         // if system sleeps then reload main
@@ -66,19 +71,18 @@ export default class PrayerTime extends Extension {
         const { prayerTimes, nextPrayer } = await this._getNextPrayers(now, prayers);
         for (const prayer of prayers) prayer.time = prayerTimes[prayer.id];
 
+        this._schedule = {
+            prayers: prayers,
+            nextPrayerI: nextPrayer,
+        };
+
         if (this._settings.isSoundPlayer) this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
 
-        switch (this._settings.displayMode) {
-            case "countdown":
-                this._countdownMain(prayers, nextPrayer);
-                break;
-            case "time":
-                this._timeMain(prayers, nextPrayer);
-                break;
-        }
+        this._tick();
+        this._clockSignalId = this._wallClock.connect("notify::clock", () => this._tick());
 
-        this._menu.populate(prayers);
-        this._menu.highlightItem(nextPrayer.i);
+        this._menu.populate(this._schedule.prayers);
+        this._menu.highlightItem(this._schedule.nextPrayerI);
     }
     async _getNextPrayers(now, prayers) {
         const fetchContext = { source: this._settings.source, mawaqitClient: null };
@@ -168,87 +172,53 @@ export default class PrayerTime extends Extension {
         return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
     }
 
-    _countdownMain(prayers, nextPrayer) {
-        this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.secondsLeft);
+    async _tick() {
+        const nextPrayer = this._schedule.prayers[this._schedule.nextPrayerI];
+        const diffUsec = nextPrayer.time.to_unix_usec() - GLib.get_real_time();
 
-        let reminderSeconds = this._settings.reminder * 60;
-        let isReminderFired = false;
+        // three second buffer
+        if (diffUsec <= 3e6) {
+            // notify prayer arrival
+            const text = _("Time for %s").format(nextPrayer.name);
+            this._indicator.text = text;
+            if (this._settings.isNotifyPrayer) Main.notify(this.metadata.name, text);
+            if (this._settings.isSoundPlayer) global.display.get_sound_player().play_from_file(this._soundFile, text, null);
 
-        this._wallClock = new GnomeDesktop.WallClock();
-        this._clockSignalId = this._wallClock.connect("notify::clock", async () => {
-            const now = GLib.DateTime.new_now_local();
-            nextPrayer.secondsLeft = this._microsecondsToSeconds(this._differenceToNow(prayers[nextPrayer.i].time, now));
-
-            if (nextPrayer.secondsLeft <= 0) {
-                this._notifyPrayerArrival(prayers[nextPrayer.i].name);
-
-                await this._moveToNewDay(now, prayers, nextPrayer);
-                nextPrayer.secondsLeft = this._microsecondsToSeconds(this._differenceToNow(prayers[nextPrayer.i].time, now));
-
-                isReminderFired = false;
-            } else if (reminderSeconds && nextPrayer.secondsLeft <= reminderSeconds && !isReminderFired) {
-                this._prayerReminder(prayers[nextPrayer.i].name);
-                isReminderFired = true;
+            // shift to tomorrow / next prayer
+            if (this._schedule.nextPrayerI === this._schedule.prayers.length - 1) {
+                this._schedule = {
+                    prayers: this._buildPrayerList(await this._getPrayerTimes(GLib.DateTime.new_now_local().add_days(1))),
+                    nextPrayerI: 0,
+                };
+                this._menu.update(this._schedule);
             } else {
-                this._indicator.setTimeLeftText(prayers[nextPrayer.i].name, nextPrayer.secondsLeft);
+                this._schedule.nextPrayerI++;
+                this._menu.highlightItem(this._schedule.nextPrayerI);
             }
-        });
-    }
-    _timeMain(prayers, nextPrayer) {
-        this._indicator.setClockTimeText(prayers[nextPrayer.i].name, prayers[nextPrayer.i].time);
-
-        let delaySeconds = this._microsecondsToSeconds(this._differenceToNow(prayers[nextPrayer.i].time));
-        const reminderSeconds = this._settings.reminder * 60;
-        let isReminderTurn = false;
-        if (reminderSeconds > 0 && delaySeconds > reminderSeconds) {
-            delaySeconds -= reminderSeconds;
-            isReminderTurn = true;
+            return;
         }
 
-        this._prayerTimeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, delaySeconds, () => {
-            (async () => {
-                if (isReminderTurn) {
-                    this._prayerReminder(prayers[nextPrayer.i].name);
-                } else {
-                    this._notifyPrayerArrival(prayers[nextPrayer.i].name);
-                    await this._moveToNewDay(GLib.DateTime.new_now_local(), prayers, nextPrayer);
-                }
-                this._timeMain(prayers, nextPrayer);
-            })();
+        const minutesLeft = Math.ceil(diffUsec / 6e7);
 
-            return GLib.SOURCE_REMOVE;
-        });
-    }
-    _notifyPrayerArrival(nextPrayerName) {
-        const text = _("Time for %s").format(nextPrayerName);
-        this._indicator.text = text;
-        if (this._settings.isNotifyPrayer) Main.notify(this.metadata.name, text);
-        if (this._settings.isSoundPlayer) global.display.get_sound_player().play_from_file(this._soundFile, text, null);
-    }
-    async _moveToNewDay(now, prayers, nextPrayer) {
-        // shift to next prayer / tomorrow
-        if (nextPrayer.i === prayers.length - 1) {
-            const tomorrow = now.add_days(1);
+        // prayer reminder
+        if (minutesLeft === this._settings.reminder) {
+            // minutesLeft will always > 0, so this._settings.reminder > 0 && ... is redundant
+            const text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder);
+            this._indicator.text = text;
+            if (this._settings.isNotifyPrayer) Main.notify(this.metadata.name, text);
+            return;
+        }
 
-            const fetchContext = { source: this._settings.source, mawaqitClient: null };
-            const tomorrowTimes = await this._getPrayerTimes(tomorrow, fetchContext);
-
-            for (const prayer of prayers) prayer.time = tomorrowTimes[prayer.id];
-            nextPrayer.i = 0;
-            const dhuhrItem = prayers.find((prayer) => prayer.id === "dhuhr");
-            if (dhuhrItem) dhuhrItem.name = this._getDhuhrName(tomorrow);
-
-            this._menu.removeAll();
-            this._menu.populate(prayers);
+        if (this._settings.displayMode === "countdown") {
+            const hh = Math.floor(minutesLeft / 60)
+                .toString()
+                .padStart(2, "0");
+            const mm = (minutesLeft % 60).toString().padStart(2, "0");
+            this._indicator.text = `${nextPrayer.name} in ${hh}:${mm}`;
         } else {
-            nextPrayer.i++;
+            this._indicator.setClockTimeText(nextPrayer.name, nextPrayer.time);
+            this._indicator.text = `${nextPrayer.name} - ${nextPrayer.time.format(this._timeFormat)}`;
         }
-        this._menu.highlightItem(nextPrayer.i);
-    }
-    _prayerReminder(nextPrayerName) {
-        const text = _("%s in %d minutes").format(nextPrayerName, this._settings.reminder);
-        this._indicator.text = text;
-        if (this._settings.isNotifyPrayer) Main.notify(this.metadata.name, text);
     }
 
     destroyGeoclue() {

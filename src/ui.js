@@ -59,7 +59,7 @@ export class Menu extends PopupMenu.PopupMenu {
 }
 
 class IndicatorClass extends PanelMenu.Button {
-    _init(extensionName, timeFormat) {
+    _init(extensionName) {
         super._init(0.5, extensionName, true);
         this.indicatorText = new St.Label({
             text: "...",
@@ -67,24 +67,10 @@ class IndicatorClass extends PanelMenu.Button {
             style: "padding: 0px 12px;",
         });
         this.add_child(this.indicatorText);
-        this._timeFormat = timeFormat;
     }
 
     set text(text) {
         this.indicatorText.set_text(text);
-    }
-
-    setTimeLeftText(nextName, secondsToNext) {
-        const totalMinutes = Math.ceil(secondsToNext / 60);
-        const hh = Math.floor(totalMinutes / 60)
-            .toString()
-            .padStart(2, "0");
-        const mm = (totalMinutes % 60).toString().padStart(2, "0");
-        this.text = `${nextName} in ${hh}:${mm}`;
-    }
-
-    setClockTimeText(nextName, nextTime) {
-        this.text = `${nextName} - ${nextTime.format(this._timeFormat)}`;
     }
 }
 export const Indicator = GObject.registerClass(IndicatorClass);
