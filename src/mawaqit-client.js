@@ -17,7 +17,7 @@ export class MawaqitClient {
             const file = cacheDir.get_child("mawaqit-cache.json");
 
             try {
-                const [success, contents] = file.load_contents(null);
+                const [success, contents] = await file.load_contents_async(null);
 
                 if (success) {
                     const parsedData = JSON.parse(new TextDecoder().decode(contents));
