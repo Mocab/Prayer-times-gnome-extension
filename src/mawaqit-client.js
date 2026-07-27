@@ -11,8 +11,7 @@ export class MawaqitClient {
         this._cache = null;
     }
 
-    // date = { day, month, year}
-    async fetchPrayerTimes(date) {
+    async fetchPrayerTimes([year, month, day]) {
         if (!this._cache) {
             const cacheDir = Gio.File.new_for_path(`${GLib.get_user_cache_dir()}/${this._extensionName}`);
             const file = cacheDir.get_child("mawaqit-cache.json");
@@ -60,11 +59,11 @@ export class MawaqitClient {
         }
 
         // calendar: months are 0 indexed, key string for days and prayer day format: fajr, ...extra?, shuruq?, dhuhr, asr, maghrib, isha.
-        const prayers = this._cache.calendar[date.month - 1][date.day.toString()];
+        const prayers = this._cache.calendar[month - 1][day.toString()];
         if (prayers.length < 5) throw new Error(_("Unexpected prayer data structure or array length"));
 
         const tz = GLib.TimeZone.new_identifier(this._cache.timezone);
-        const convertToGDateTime = (prayerTimeStr) => GLib.DateTime.new(tz, date.year, date.month, date.day, +prayerTimeStr.slice(0, 2), +prayerTimeStr.slice(3, 5), 0);
+        const convertToGDateTime = (prayerTimeStr) => GLib.DateTime.new(tz, year, month, day, +prayerTimeStr.slice(0, 2), +prayerTimeStr.slice(3, 5), 0);
 
         return {
             fajr: convertToGDateTime(prayers[0]),

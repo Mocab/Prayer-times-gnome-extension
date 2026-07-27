@@ -10,10 +10,10 @@ export class CalcPrayerTimes {
     #sinLat;
     #cosLat;
 
-    constructor(date, timezone, location, calcMethod, asrMethod, highLatAdjustment) {
+    constructor([year, month, day], timezone, location, calcMethod, asrMethod, highLatAdjustment) {
         this.#location = location;
         // precompute the Julian Day offset for the target date: Glib Julian baseline offset (+1721425) + J2000 epoch baseline (-2451545.0) + noon adjustment factor (-0.5).
-        this.#jdOffset = GLib.Date.new_dmy(date.day, date.month, date.year).get_julian() - 730120.5 - location.longitude / 360;
+        this.#jdOffset = GLib.Date.new_dmy(day, month, year).get_julian() - 730120.5 - location.longitude / 360;
         this.#sinLat = this.#sin(location.latitude);
         this.#cosLat = this.#cos(location.latitude);
         const noonSunPos = this.#getSunPos();
@@ -48,7 +48,7 @@ export class CalcPrayerTimes {
         astronomicalHours.isha = this.#adjustHighLat(highLatAdjustment, astronomicalHours.isha, calcMethodAngles.isha, sunsetTime, nightLen, 1);
 
         // convert astronomical time to local time zone
-        const utcMidnight = GLib.DateTime.new_utc(date.year, date.month, date.day, 0, 0, 0.0);
+        const utcMidnight = GLib.DateTime.new_utc(year, month, day, 0, 0, 0.0);
         for (const key in astronomicalHours) {
             this[key] = utcMidnight.add_minutes(Math.round((astronomicalHours[key] - this.#location.longitude / 15) * 60)).to_timezone(timezone);
         }

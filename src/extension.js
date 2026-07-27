@@ -121,14 +121,13 @@ export default class PrayerTime extends Extension {
     }
 
     async _getPrayerTimes(dateTime, cache = { mawaqitClient: null }) {
-        const [year, month, day] = dateTime.get_ymd();
-        const date = { day, month, year };
+        const ymd = dateTime.get_ymd();
 
         // try Mawaqit if selected
         if (this._source === "mawaqit") {
             try {
                 if (!cache.mawaqitClient) cache.mawaqitClient = new MawaqitClient(this.metadata.name, this._settings.mawaqitSlug);
-                return await cache.mawaqitClient.fetchPrayerTimes(date);
+                return await cache.mawaqitClient.fetchPrayerTimes(ymd);
             } catch (e) {
                 const useAuto = this._settings.isFallbackAutoLocation;
 
@@ -144,7 +143,7 @@ export default class PrayerTime extends Extension {
             try {
                 if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.onLocationChanged.bind(this));
                 await this._geoclueService.start();
-                return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), this._geoclueService.currentLocation, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+                return new CalcPrayerTimes(ymd, GLib.TimeZone.new_local(), this._geoclueService.currentLocation, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
             } catch (e) {
                 if (this._geoclueService) this.destroyGeoclue(); // destroy if initialised before then failed on current run
                 this._source = "manual";
@@ -153,7 +152,7 @@ export default class PrayerTime extends Extension {
         }
 
         // final fallback (manual)
-        return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+        return new CalcPrayerTimes(ymd, GLib.TimeZone.new_local(), this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
     }
 
     async _tick() {
