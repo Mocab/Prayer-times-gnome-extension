@@ -33,6 +33,7 @@ export default class PrayerTime extends Extension {
 
         this._wallClock = new GnomeDesktop.WallClock();
 
+        this._source = null;
         this._schedule = {
             prayers: null,
             nextPrayerI: null,
@@ -53,6 +54,7 @@ export default class PrayerTime extends Extension {
     }
 
     async _init() {
+        this._source = this._settings.source;
         this._schedule = await this._resolveCurrentPrayerContext();
 
         if (this._settings.isSoundPlayer) this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
@@ -66,7 +68,7 @@ export default class PrayerTime extends Extension {
     async _resolveCurrentPrayerContext() {
         const now = GLib.DateTime.new_now_local();
         const nowUsec = now.to_unix_usec();
-        const cache = { source: this._settings.source, mawaqitClient: null }; // cache Mawaqit prayer times for subsequent calls within this method
+        const cache = { mawaqitClient: null }; // cache Mawaqit prayer times for subsequent calls within this method
 
         const todayTimes = await this._getPrayerTimes(now, cache);
 
@@ -125,19 +127,19 @@ export default class PrayerTime extends Extension {
         return Math.ceil(microseconds * 0.000001);
     }
 
-    async _getPrayerTimes(dateTime, context) {
+    async _getPrayerTimes(dateTime, cache = { mawaqitClient: null }) {
         const [year, month, day] = dateTime.get_ymd();
         const date = { day, month, year };
 
         // try Mawaqit if selected
-        if (context.source === "mawaqit") {
+        if (this._source === "mawaqit") {
             try {
-                if (!context.mawaqitClient) context.mawaqitClient = new MawaqitClient(this.metadata.name, this._settings.mawaqitSlug);
-                return await context.mawaqitClient.fetchPrayerTimes(date);
+                if (!cache.mawaqitClient) cache.mawaqitClient = new MawaqitClient(this.metadata.name, this._settings.mawaqitSlug);
+                return await cache.mawaqitClient.fetchPrayerTimes(date);
             } catch (e) {
                 const useAuto = this._settings.isFallbackAutoLocation;
 
-                context.source = useAuto ? "auto" : "manual";
+                this._source = useAuto ? "auto" : "manual";
 
                 const msg = useAuto ? _("Failed to connect to Mawaqit. Defaulting to automatic location detection: %s") : _("Failed to connect to Mawaqit. Defaulting to manual location: %s");
                 Main.notify(this.metadata.name, msg.format(e.message));
@@ -145,13 +147,14 @@ export default class PrayerTime extends Extension {
         }
 
         // try auto location if selected as a source, or if Mawaqit failed
-        if (context.source === "auto") {
+        if (this._source === "auto") {
             try {
-                if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.reloadMain.bind(this));
-                return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), await this._geoclueService.start(), this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+                if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.onLocationChanged.bind(this));
+                await this._geoclueService.start();
+                return new CalcPrayerTimes(date, GLib.TimeZone.new_local(), this._geoclueService.currentLocation, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
             } catch (e) {
-                if (this._geoclueService) this.destroyGeoclue(); // destroy if initialised once then failed on subsequent run
-                context.source = "manual";
+                if (this._geoclueService) this.destroyGeoclue(); // destroy if initialised before then failed on current run
+                this._source = "manual";
                 Main.notify(this.metadata.name, _("Failed to find location automatically. Defaulting to manual calculations: %s").format(e.message));
             }
         }
@@ -209,6 +212,12 @@ export default class PrayerTime extends Extension {
         }
     }
 
+    async onLocationChanged() {
+        this._schedule = await this._resolveCurrentPrayerContext();
+        this._menu.update(this._schedule);
+        await this._tick();
+    }
+
     destroyGeoclue() {
         if (this._geoclueService) {
             this._geoclueService.destroy();
@@ -232,12 +241,17 @@ export default class PrayerTime extends Extension {
             this._prayerTimeoutId = null;
         }
 
+        this.destroyGeoclue();
+
+        this._source = null;
+
         this._soundFile = null;
     }
     reloadMain() {
         this._destroyMain();
         this._init();
     }
+
     disable() {
         if (this._wakeProxy) {
             if (this._wakeSignalId) {
@@ -246,8 +260,6 @@ export default class PrayerTime extends Extension {
             }
             this._wakeProxy = null;
         }
-
-        this.destroyGeoclue();
 
         this._destroyMain();
 

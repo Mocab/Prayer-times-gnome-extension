@@ -52,6 +52,16 @@ export class Menu extends PopupMenu.PopupMenu {
         this._currentActiveIndex = i;
     }
 
+    update(schedule) {
+        const rows = this._getMenuItems();
+        for (let i = 0; i < rows.length; i++) {
+            const items = rows[i].get_children();
+            items[1].text = schedule.prayers[i].name;
+            items[items.length - 1].text = schedule.prayers[i].time.format(this._timeFormat);
+        }
+        this.highlightItem(schedule.nextPrayerI);
+    }
+
     removeAll() {
         super.removeAll();
         this._currentActiveIndex = null;

@@ -2,21 +2,18 @@ import Geoclue from "gi://Geoclue";
 import GObject from "gi://GObject";
 
 export class GeoclueService {
-    constructor(extensionId, reloadMain) {
+    constructor(extensionId, onLocationChanged) {
         this._extensionId = extensionId;
-        this._reloadExtensionMain = reloadMain;
+        this._onLocationChangedMain = onLocationChanged;
 
         this._geoclueProxy = null;
         this._signalId = null;
-
         this.currentLocation = null;
         this._startPromise = null;
     }
 
     start() {
-        if (this._startPromise) {
-            return this._startPromise;
-        }
+        if (this._startPromise) return this._startPromise;
 
         this._startPromise = new Promise((resolve, reject) => {
             Geoclue.Simple.new_with_thresholds(this._extensionId, Geoclue.AccuracyLevel.NEIGHBORHOOD, 600, 5000, null, (source, result) => {
@@ -24,20 +21,12 @@ export class GeoclueService {
                     this._geoclueProxy = Geoclue.Simple.new_with_thresholds_finish(result);
 
                     const location = this._geoclueProxy.get_location();
-                    this.currentLocation = {
-                        latitude: location.latitude,
-                        longitude: location.longitude,
-                    };
+                    this.currentLocation = { latitude: location.latitude, longitude: location.longitude };
 
                     this._signalId = this._geoclueProxy.connect("notify::location", (service) => {
-                        const newLoc = service.get_location();
-
-                        this.currentLocation = {
-                            latitude: newLoc.latitude,
-                            longitude: newLoc.longitude,
-                        };
-
-                        this._reloadExtensionMain();
+                        const newLocation = service.get_location();
+                        this.currentLocation = { latitude: newLocation.latitude, longitude: newLocation.longitude };
+                        this._onLocationChangedMain();
                     });
 
                     resolve(this.currentLocation);
