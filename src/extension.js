@@ -225,11 +225,6 @@ export default class PrayerTime extends Extension {
             this._clockSignalId = null;
         }
 
-        if (this._prayerTimeoutId) {
-            GLib.Source.remove(this._prayerTimeoutId);
-            this._prayerTimeoutId = null;
-        }
-
         this.destroyGeoclue();
 
         this._source = null;
