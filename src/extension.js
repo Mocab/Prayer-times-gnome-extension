@@ -68,12 +68,12 @@ export default class PrayerTime extends Extension {
             { id: "isha", name: _("Isha"), time: null },
         ];
 
-        const { prayerTimes, nextPrayer } = await this._getNextPrayers(now, prayers);
+        const { prayerTimes, nextPrayerI } = await this._resolveCurrentPrayerContext();
         for (const prayer of prayers) prayer.time = prayerTimes[prayer.id];
 
         this._schedule = {
             prayers: prayers,
-            nextPrayerI: nextPrayer,
+            nextPrayerI,
         };
 
         if (this._settings.isSoundPlayer) this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
@@ -84,49 +84,42 @@ export default class PrayerTime extends Extension {
         this._menu.populate(this._schedule.prayers);
         this._menu.highlightItem(this._schedule.nextPrayerI);
     }
-    async _getNextPrayers(now, prayers) {
-        const fetchContext = { source: this._settings.source, mawaqitClient: null };
+    async _resolveCurrentPrayerContext() {
+        const now = GLib.DateTime.new_now_local();
+        const nowUsec = now.to_unix_usec();
+        const cache = { source: this._settings.source, mawaqitClient: null }; // cache Mawaqit prayer times for subsequent calls within this method
 
-        const todayTimes = await this._getPrayerTimes(now, fetchContext);
+        const todayTimes = await this._getPrayerTimes(now, cache);
 
         // before today fajr
-        const todayFajrDiff = this._differenceToNow(todayTimes.fajr, now);
-        if (todayFajrDiff > 0) {
-            const yesterdayTimes = await this._getPrayerTimes(now.add_days(-1), fetchContext);
-            const yesterdayIshaDiff = this._differenceToNow(yesterdayTimes.isha, now);
+        if (todayTimes.fajr.to_unix_usec() > nowUsec) {
+            const yesterdayTimes = await this._getPrayerTimes(now.add_days(-1), cache);
             // edge case when new day but yesterday isha hasn't passed
-            if (yesterdayIshaDiff > 0) {
+            if (yesterdayTimes.isha.to_unix_usec() > nowUsec) {
+                const prayers = yesterdayTimes;
                 return {
-                    prayerTimes: yesterdayTimes,
-                    nextPrayer: { secondsLeft: this._microsecondsToSeconds(yesterdayIshaDiff), i: prayers.length - 1 },
+                    prayers,
+                    nextPrayerI: prayers.length - 1,
                 };
             }
             // otherwise next is today fajr
             return {
-                prayerTimes: todayTimes,
-                nextPrayer: { secondsLeft: this._microsecondsToSeconds(todayFajrDiff), i: 0 },
+                prayers: todayTimes,
+                nextPrayerI: 0,
             };
         }
 
         // after today isha
-        const todayIshaDiff = this._differenceToNow(todayTimes.isha, now);
-        if (todayIshaDiff <= 0) {
-            const tomorrowTimes = await this._getPrayerTimes(now.add_days(1), fetchContext);
+        if (nowUsec >= todayTimes.isha.to_unix_usec()) {
             return {
-                prayerTimes: tomorrowTimes,
-                nextPrayer: { secondsLeft: this._microsecondsToSeconds(this._differenceToNow(tomorrowTimes.fajr, now)), i: 0 },
+                prayers: await this._getPrayerTimes(now.add_days(1), cache),
+                nextPrayerI: 0,
             };
         }
 
         // between today fajr and isha
-        for (let i = 1; i < prayers.length; i++) {
-            const prayerDiff = this._differenceToNow(todayTimes[prayers[i].id], now);
-            if (prayerDiff > 0) {
-                return {
-                    prayerTimes: todayTimes,
-                    nextPrayer: { secondsLeft: this._microsecondsToSeconds(prayerDiff), i },
-                };
-            }
+        for (let i = 1; i < todayTimes.length; i++) {
+            if (todayTimes[i].time.to_unix_usec() > nowUsec) return { todayTimes, nextPrayerI: i };
         }
     }
 
