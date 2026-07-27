@@ -37,7 +37,7 @@ export default class PrayerTime extends Extension {
             prayers: null,
             nextPrayerI: null,
         };
-        this._main();
+        this._init();
 
         // if system sleeps then reload main
         Gio.DBusProxy.new_for_bus(Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null, "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", null, (source, result) => {
@@ -52,29 +52,8 @@ export default class PrayerTime extends Extension {
         });
     }
 
-    _getDhuhrName(dateTime) {
-        return dateTime.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr");
-    }
-
-    async _main() {
-        const now = GLib.DateTime.new_now_local();
-
-        const prayers = [
-            { id: "fajr", name: _("Fajr"), time: null },
-            ...(this._settings.isIncludeSunnah ? [{ id: "duha", name: _("Duha"), time: null }] : []), //
-            { id: "dhuhr", name: this._getDhuhrName(now), time: null },
-            { id: "asr", name: _("Asr"), time: null },
-            { id: "maghrib", name: _("Maghrib"), time: null },
-            { id: "isha", name: _("Isha"), time: null },
-        ];
-
-        const { prayerTimes, nextPrayerI } = await this._resolveCurrentPrayerContext();
-        for (const prayer of prayers) prayer.time = prayerTimes[prayer.id];
-
-        this._schedule = {
-            prayers: prayers,
-            nextPrayerI,
-        };
+    async _init() {
+        this._schedule = await this._resolveCurrentPrayerContext();
 
         if (this._settings.isSoundPlayer) this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
 
@@ -96,7 +75,7 @@ export default class PrayerTime extends Extension {
             const yesterdayTimes = await this._getPrayerTimes(now.add_days(-1), cache);
             // edge case when new day but yesterday isha hasn't passed
             if (yesterdayTimes.isha.to_unix_usec() > nowUsec) {
-                const prayers = yesterdayTimes;
+                const prayers = this._buildPrayerList(yesterdayTimes);
                 return {
                     prayers,
                     nextPrayerI: prayers.length - 1,
@@ -104,7 +83,7 @@ export default class PrayerTime extends Extension {
             }
             // otherwise next is today fajr
             return {
-                prayers: todayTimes,
+                prayers: this._buildPrayerList(todayTimes),
                 nextPrayerI: 0,
             };
         }
@@ -112,15 +91,31 @@ export default class PrayerTime extends Extension {
         // after today isha
         if (nowUsec >= todayTimes.isha.to_unix_usec()) {
             return {
-                prayers: await this._getPrayerTimes(now.add_days(1), cache),
+                prayers: this._buildPrayerList(await this._getPrayerTimes(now.add_days(1), cache)),
                 nextPrayerI: 0,
             };
         }
 
         // between today fajr and isha
-        for (let i = 1; i < todayTimes.length; i++) {
-            if (todayTimes[i].time.to_unix_usec() > nowUsec) return { todayTimes, nextPrayerI: i };
+        const prayers = this._buildPrayerList(todayTimes);
+        for (let i = 1; i < prayers.length; i++) {
+            if (prayers[i].time.to_unix_usec() > nowUsec) return { prayers, nextPrayerI: i };
         }
+    }
+
+    _buildPrayerList(prayerTimes) {
+        const fajr = { id: "fajr", name: _("Fajr"), time: prayerTimes.fajr ?? null };
+        const dhuhr = {
+            id: "dhuhr",
+            name: prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"),
+            time: prayerTimes.dhuhr ?? null,
+        };
+        const asr = { id: "asr", name: _("Asr"), time: prayerTimes.asr ?? null };
+        const maghrib = { id: "maghrib", name: _("Maghrib"), time: prayerTimes.maghrib ?? null };
+        const isha = { id: "isha", name: _("Isha"), time: prayerTimes.isha ?? null };
+
+        if (!this._settings.isIncludeSunnah) return [fajr, dhuhr, asr, maghrib, isha];
+        return [fajr, { id: "duha", name: _("Duha"), time: prayerTimes.duha ?? null }, dhuhr, asr, maghrib, isha];
     }
 
     _differenceToNow(time, now = GLib.DateTime.new_now_local()) {
@@ -241,7 +236,7 @@ export default class PrayerTime extends Extension {
     }
     reloadMain() {
         this._destroyMain();
-        this._main();
+        this._init();
     }
     disable() {
         if (this._wakeProxy) {
