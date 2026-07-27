@@ -18,39 +18,54 @@ export class CalcPrayerTimes {
         this.#cosLat = this.#cos(location.latitude);
         const noonSunPos = this.#getSunPos();
 
-        const astronomicalHours = {};
-        const calcMethodAngles = {
-            mwl: { fajr: 18, isha: 17 },
-            egypt: { fajr: 19.5, isha: 17.5 },
-            france: { fajr: 12, isha: 12 },
-            isna: { fajr: 15, isha: 15 },
-            karachi: { fajr: 18, isha: 18 },
-            turkey: { fajr: 18, isha: 17 },
-            makkah: { fajr: 18.5, isha: null },
-            malaysia: { fajr: 18, isha: 18 },
-            russia: { fajr: 16, isha: 15 },
-        }[calcMethod.id] ?? { fajr: calcMethod.fajr, isha: calcMethod.isha };
+        let calcMethodAngles = null;
+        switch (calcMethod.id) {
+            case "mwl":
+            case "turkey":
+                calcMethodAngles = { fajr: 18, isha: 17 };
+                break;
+            case "egypt":
+                calcMethodAngles = { fajr: 19.5, isha: 17.5 };
+                break;
+            case "france":
+                calcMethodAngles = { fajr: 12, isha: 12 };
+                break;
+            case "isna":
+                calcMethodAngles = { fajr: 15, isha: 15 };
+                break;
+            case "karachi":
+            case "malaysia":
+                calcMethodAngles = { fajr: 18, isha: 18 };
+                break;
+            case "makkah":
+                calcMethodAngles = { fajr: 18.5, isha: null };
+                break;
+            case "russia":
+                calcMethodAngles = { fajr: 16, isha: 15 };
+                break;
+            default:
+                calcMethodAngles = { fajr: calcMethod.fajr, isha: calcMethod.isha };
+        }
 
         const sunHorizonAngle = 0.833; // angle where the middle of the sun is below the horizon
         const sunriseTime = this.#time(noonSunPos, sunHorizonAngle, -1);
         const sunsetTime = this.#time(noonSunPos, sunHorizonAngle, 1);
-
-        astronomicalHours.fajr = this.#time(noonSunPos, calcMethodAngles.fajr, -1);
-        astronomicalHours.duha = sunriseTime + 0.25; // 15 minutes after sunrise
-        astronomicalHours.dhuhr = this.#mod(12 - noonSunPos.timeEq, 24);
-        astronomicalHours.asr = this.#asrTime(asrMethod, noonSunPos);
-        astronomicalHours.maghrib = sunsetTime + 0.017; // ~1 minute after sunset
-        astronomicalHours.isha = calcMethod.id === "makkah" ? astronomicalHours.maghrib + 1.5 : this.#time(noonSunPos, calcMethodAngles.isha, 1);
-
-        // high latitude adjustments
         const nightLen = sunriseTime + 24 - sunsetTime;
-        astronomicalHours.fajr = this.#adjustHighLat(highLatAdjustment, astronomicalHours.fajr, calcMethodAngles.fajr, sunriseTime, nightLen, -1);
-        astronomicalHours.isha = this.#adjustHighLat(highLatAdjustment, astronomicalHours.isha, calcMethodAngles.isha, sunsetTime, nightLen, 1);
+
+        const astronomicalHours = {
+            fajr: this.#adjustHighLat(highLatAdjustment, this.#time(noonSunPos, calcMethodAngles.fajr, -1), calcMethodAngles.fajr, sunriseTime, nightLen, -1),
+            duha: sunriseTime + 0.25, // 15 minutes after sunrise
+            dhuhr: this.#mod(12 - noonSunPos.timeEq, 24),
+            asr: this.#asrTime(asrMethod, noonSunPos),
+            maghrib: sunsetTime + 0.017, // ~1 minute after sunset
+            isha: this.#adjustHighLat(highLatAdjustment, calcMethod.id === "makkah" ? astronomicalHours.maghrib + 1.5 : this.#time(noonSunPos, calcMethodAngles.isha, 1), calcMethodAngles.isha, sunsetTime, nightLen, 1),
+        };
 
         // convert astronomical time to local time zone
+        const longitudeOffsetHours = this.#location.longitude / 15;
         const utcMidnight = GLib.DateTime.new_utc(year, month, day, 0, 0, 0.0);
-        for (const key in astronomicalHours) {
-            this[key] = utcMidnight.add_minutes(Math.round((astronomicalHours[key] - this.#location.longitude / 15) * 60)).to_timezone(timezone);
+        for (const prayer in astronomicalHours) {
+            this[prayer] = utcMidnight.add_minutes(Math.round((astronomicalHours[prayer] - longitudeOffsetHours) * 60)).to_timezone(timezone);
         }
     }
 
