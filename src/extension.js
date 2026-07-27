@@ -120,13 +120,6 @@ export default class PrayerTime extends Extension {
         return [fajr, { id: "duha", name: _("Duha"), time: prayerTimes.duha ?? null }, dhuhr, asr, maghrib, isha];
     }
 
-    _differenceToNow(time, now = GLib.DateTime.new_now_local()) {
-        return time.difference(now);
-    }
-    _microsecondsToSeconds(microseconds) {
-        return Math.ceil(microseconds * 0.000001);
-    }
-
     async _getPrayerTimes(dateTime, cache = { mawaqitClient: null }) {
         const [year, month, day] = dateTime.get_ymd();
         const date = { day, month, year };
@@ -228,12 +221,9 @@ export default class PrayerTime extends Extension {
         this._indicator.text = "...";
         this._menu.removeAll();
 
-        if (this._wallClock) {
-            if (this._clockSignalId) {
-                this._wallClock.disconnect(this._clockSignalId);
-                this._clockSignalId = null;
-            }
-            this._wallClock = null;
+        if (this._clockSignalId) {
+            this._wallClock.disconnect(this._clockSignalId);
+            this._clockSignalId = null;
         }
 
         if (this._prayerTimeoutId) {
@@ -244,6 +234,10 @@ export default class PrayerTime extends Extension {
         this.destroyGeoclue();
 
         this._source = null;
+        this._schedule = {
+            prayers: null,
+            nextPrayerI: null,
+        };
 
         this._soundFile = null;
     }
@@ -263,11 +257,15 @@ export default class PrayerTime extends Extension {
 
         this._destroyMain();
 
+        if (this._wallClock) this._wallClock = null;
+
         if (this._indicator) {
             this._indicator.destroy();
             this._indicator = null;
         }
         this._menu = null;
+
+        this._timeFormat = null;
 
         if (this._settings) {
             this._settings.destroy();
