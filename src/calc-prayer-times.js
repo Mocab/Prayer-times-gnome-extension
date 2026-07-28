@@ -52,13 +52,14 @@ export class CalcPrayerTimes {
         const sunsetTime = this.#time(noonSunPos, sunHorizonAngle, 1);
         const nightLen = sunriseTime + 24 - sunsetTime;
 
+        const maghrib = sunsetTime + 0.017; // ~1 minute after sunset
         const astronomicalHours = {
             fajr: this.#adjustHighLat(highLatAdjustment, this.#time(noonSunPos, calcMethodAngles.fajr, -1), calcMethodAngles.fajr, sunriseTime, nightLen, -1),
             duha: sunriseTime + 0.25, // 15 minutes after sunrise
             dhuhr: this.#mod(12 - noonSunPos.timeEq, 24),
             asr: this.#asrTime(asrMethod, noonSunPos),
-            maghrib: sunsetTime + 0.017, // ~1 minute after sunset
-            isha: this.#adjustHighLat(highLatAdjustment, calcMethod.id === "makkah" ? astronomicalHours.maghrib + 1.5 : this.#time(noonSunPos, calcMethodAngles.isha, 1), calcMethodAngles.isha, sunsetTime, nightLen, 1),
+            maghrib,
+            isha: this.#adjustHighLat(highLatAdjustment, calcMethod.id === "makkah" ? maghrib + 1.5 : this.#time(noonSunPos, calcMethodAngles.isha, 1), calcMethodAngles.isha, sunsetTime, nightLen, 1),
         };
 
         // convert astronomical time to local time zone
