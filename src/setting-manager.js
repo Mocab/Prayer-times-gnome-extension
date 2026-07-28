@@ -7,13 +7,12 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
 class SettingManagerClass extends GObject.Object {
-    _init(gSettings, metadata, reloadMain, destroyGeoclue) {
+    _init(gSettings, metadata, reloadMain) {
         super._init();
         this._gSettings = gSettings;
         this._gSettingListener = {};
         this._desktopSettings = Gio.Settings.new("org.gnome.desktop.interface");
         this._reloadExtensionMain = reloadMain;
-        this._destroyExtensionGeoClue = destroyGeoclue;
 
         const versionCache = this._gSettings.get_int("version-cache");
         if (versionCache < metadata.version) {
@@ -49,35 +48,34 @@ class SettingManagerClass extends GObject.Object {
     }
 
     _bindSimpleSettings() {
-        const settings = [
-            // critical settings
-            { key: "asr-method", prop: "asrMethod", type: "string", reload: true },
-            { key: "high-latitude-adjustment", prop: "highLatAdjustment", type: "string", reload: true },
-            { key: "fallback-auto-location", prop: "isFallbackAutoLocation", type: "boolean", reload: true },
-            { key: "include-sunnah", prop: "isIncludeSunnah", type: "boolean", reload: true },
-            { key: "display-mode", prop: "displayMode", type: "string", reload: true },
-            { key: "reminder", prop: "reminder", type: "int", reload: true }, // TODO: if countdown then no, for display yes
-            // ui settings
-            { key: "notify-prayer", prop: "isNotify", type: "boolean", reload: false },
-            { key: "sound-player", prop: "isSound", type: "boolean", reload: false },
+        const reloadMainSettings = [
+            { key: "asr-method", prop: "asrMethod", type: "string" },
+            { key: "high-latitude-adjustment", prop: "highLatAdjustment", type: "string" },
+            { key: "fallback-auto-location", prop: "isFallbackAutoLocation", type: "boolean" },
+            { key: "include-sunnah", prop: "isIncludeSunnah", type: "boolean" },
+            { key: "display-mode", prop: "displayMode", type: "string" },
+            { key: "reminder", prop: "reminder", type: "int" },
+            { key: "sound-player", prop: "isSound", type: "boolean" },
         ];
 
-        for (const { key, prop, type, reload } of settings) {
+        for (const { key, prop, type } of reloadMainSettings) {
             const getter = `get_${type}`;
-
             this[prop] = this._gSettings[getter](key);
-
             this._gSettingListener[prop] = this._gSettings.connect(`changed::${key}`, (gSettings) => {
                 this[prop] = gSettings[getter](key);
-                if (reload) this._reloadExtensionMain();
+                this._reloadExtensionMain();
             });
         }
 
-        // TODO: only reload ui
         this.clockFormat = this._desktopSettings.get_string("clock-format");
         this._clockFormatListener = this._desktopSettings.connect("changed::clock-format", (gSettings, key) => {
             this.clockFormat = gSettings.get_string(key);
             this._reloadExtensionMain();
+        });
+
+        this.isNotify = this._gSettings.get_boolean("notify-prayer");
+        this._gSettingListener.isNotifyListener = this._gSettings.connect("changed::notify-prayer", (gSettings, key) => {
+            this.isNotify = gSettings.get_boolean(key);
         });
     }
 
@@ -107,8 +105,6 @@ class SettingManagerClass extends GObject.Object {
             this._disconnectConditional("mawaqit-slug");
             this._disconnectConditional("latitude");
             this._disconnectConditional("longitude");
-
-            this._destroyExtensionGeoClue();
 
             chooseSource();
             this._reloadExtensionMain();

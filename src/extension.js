@@ -15,7 +15,7 @@ import { CalcPrayerTimes } from "./calc-prayer-times.js";
 
 export default class PrayerTime extends Extension {
     enable() {
-        this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this), this.destroyGeoclue.bind(this));
+        this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this));
 
         this._timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
         this._indicator = new Indicator(this.metadata.name);
@@ -145,7 +145,7 @@ export default class PrayerTime extends Extension {
                 await this._geoclueService.start();
                 return new CalcPrayerTimes(ymd, GLib.TimeZone.new_local(), this._geoclueService.currentLocation, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
             } catch (e) {
-                if (this._geoclueService) this.destroyGeoclue(); // destroy if initialised before then failed on current run
+                if (this._geoclueService) this._destroyGeoclue(); // destroy if initialised before then failed on current run
                 this._source = "manual";
                 Main.notify(this.metadata.name, _("Failed to find location automatically. Defaulting to manual calculations: %s").format(e.message));
             }
@@ -210,7 +210,7 @@ export default class PrayerTime extends Extension {
         await this._tick();
     }
 
-    destroyGeoclue() {
+    _destroyGeoclue() {
         if (this._geoclueService) {
             this._geoclueService.destroy();
             this._geoclueService = null;
@@ -225,7 +225,7 @@ export default class PrayerTime extends Extension {
             this._clockSignalId = null;
         }
 
-        this.destroyGeoclue();
+        this._destroyGeoclue();
 
         this._source = null;
         this._schedule = {
