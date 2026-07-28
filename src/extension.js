@@ -170,7 +170,7 @@ export default class PrayerTime extends Extension {
             // shift to tomorrow / next prayer
             if (this._schedule.nextPrayerI === this._schedule.prayers.length - 1) {
                 this._schedule = {
-                    prayers: this._buildPrayerList(await this._getPrayerTimes(GLib.DateTime.new_now_local().add_days(1))),
+                    prayers: this._buildPrayerList(await this._getPrayerTimes(this._schedule.prayers[0].time.add_days(1))),
                     nextPrayerI: 0,
                 };
                 this._menu.update(this._schedule);
