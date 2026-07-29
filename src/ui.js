@@ -54,11 +54,19 @@ export class Menu extends PopupMenu.PopupMenu {
 
     update(schedule) {
         const rows = this._getMenuItems();
+
         for (let i = 0; i < rows.length; i++) {
-            const items = rows[i].get_children();
-            items[1].text = schedule.prayers[i].name;
-            items[items.length - 1].text = schedule.prayers[i].time.format(this._timeFormat);
+            const children = rows[i].get_children();
+            const prayer = schedule.prayers[i];
+
+            const nameLabel = children[1];
+            if (nameLabel.text !== prayer.name) nameLabel.set_text(prayer.name);
+
+            const timeLabel = children[children.length - 1];
+            const formattedTime = prayer.time.format(this._timeFormat);
+            if (timeLabel.text !== formattedTime) timeLabel.set_text(formattedTime);
         }
+
         this.highlightItem(schedule.nextPrayerI);
     }
 
@@ -71,16 +79,20 @@ export class Menu extends PopupMenu.PopupMenu {
 class IndicatorClass extends PanelMenu.Button {
     _init(extensionName) {
         super._init(0.5, extensionName, true);
-        this.indicatorText = new St.Label({
+        this._label = new St.Label({
             text: "...",
             y_align: Clutter.ActorAlign.CENTER,
             style: "padding: 0px 12px;",
         });
-        this.add_child(this.indicatorText);
+        this.add_child(this._label);
     }
 
-    set text(text) {
-        this.indicatorText.set_text(text);
+    get text() {
+        return this._label.text;
+    }
+
+    set text(value) {
+        if (this._label.text !== value) this._label.set_text(value);
     }
 }
 export const Indicator = GObject.registerClass(IndicatorClass);
