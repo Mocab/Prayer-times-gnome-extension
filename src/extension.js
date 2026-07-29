@@ -190,15 +190,10 @@ export default class PrayerTime extends Extension {
             return;
         }
 
-        if (this._settings.displayMode === "countdown") {
-            const hh = Math.floor(minutesLeft / 60)
-                .toString()
-                .padStart(2, "0");
-            const mm = (minutesLeft % 60).toString().padStart(2, "0");
-            this._indicator.text = `${nextPrayer.name} in ${hh}:${mm}`;
-        } else {
-            this._indicator.text = `${nextPrayer.name} - ${nextPrayer.time.format(this._timeFormat)}`;
-        }
+        this._indicator.text =
+            this._settings.displayMode === "countdown"
+                ? `${nextPrayer.name} in ${((minutesLeft / 60) | 0).padStart(2, "0")}:${(minutesLeft % 60).padStart(2, "0")}` // | 0 same as Math.floor when x > 0
+                : `${nextPrayer.name} - ${nextPrayer.time.format(this._timeFormat)}`;
     }
 
     async onLocationChanged() {
