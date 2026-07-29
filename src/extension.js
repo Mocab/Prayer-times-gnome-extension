@@ -62,8 +62,7 @@ export default class PrayerTime extends Extension {
         this._tick();
         this._clockSignalId = this._wallClock.connect("notify::clock", () => this._tick());
 
-        this._menu.populate(this._schedule.prayers);
-        this._menu.highlightItem(this._schedule.nextPrayerI);
+        this._menu.populate(this._schedule);
     }
     async _resolveCurrentPrayerContext() {
         const now = GLib.DateTime.new_now_local();
@@ -175,8 +174,7 @@ export default class PrayerTime extends Extension {
                 };
                 this._menu.update(this._schedule);
             } else {
-                this._schedule.nextPrayerI++;
-                this._menu.highlightItem(this._schedule.nextPrayerI);
+                this._menu.highlightItem(++this._schedule.nextPrayerI);
             }
             return;
         }

@@ -15,8 +15,8 @@ export class Menu extends PopupMenu.PopupMenu {
         this._timeFormat = timeFormat;
     }
 
-    populate(prayers) {
-        for (const prayer of prayers) {
+    populate(schedule) {
+        for (const prayer of schedule.prayers) {
             const menuItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, activate: false, hover: false });
 
             menuItem.add_child(
@@ -40,6 +40,7 @@ export class Menu extends PopupMenu.PopupMenu {
 
             this.addMenuItem(menuItem);
         }
+        this.highlightItem(schedule.nextPrayerI);
     }
 
     highlightItem(i) {
