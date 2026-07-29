@@ -199,7 +199,6 @@ export default class PrayerTime extends Extension {
             const mm = (minutesLeft % 60).toString().padStart(2, "0");
             this._indicator.text = `${nextPrayer.name} in ${hh}:${mm}`;
         } else {
-            this._indicator.setClockTimeText(nextPrayer.name, nextPrayer.time);
             this._indicator.text = `${nextPrayer.name} - ${nextPrayer.time.format(this._timeFormat)}`;
         }
     }
