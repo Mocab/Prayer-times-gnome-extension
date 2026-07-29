@@ -1,33 +1,29 @@
-PACK_NAME    := prayertimes@mocab
-EXT_DIR      := $(HOME)/.local/share/gnome-shell/extensions/$(PACK_NAME)
+EXT_NAME     := prayertimes@mocab
+PACK_NAME    := $(EXT_NAME).shell-extension.zip
+EXT_DIR      := $(HOME)/.local/share/gnome-shell/extensions/$(EXT_NAME)
 SRC          := src
 
 .PHONY: all pack install clean dev
 
 all: pack
 
-$(PACK_NAME).zip:
-	@echo "Creating & packing $(PACK_NAME).zip"
+$(PACK_NAME):
+	@echo "Creating & packing $(PACK_NAME)..."
 	@gnome-extensions pack $(SRC) \
-	    --force \
-	    --podir="../po" \
-	    --extra-source="../CHANGELOG.md" \
+		--force \
+		--podir="../po" \
 		$(foreach item,$(shell ls $(SRC)),--extra-source="$(item)")
 
-pack: clean $(PACK_NAME).zip
+pack: $(PACK_NAME)
 
-install:
-	@echo "Installing to $(EXT_DIR)"
-	@mkdir -p $(EXT_DIR)
-	@rm -rf $(EXT_DIR)/*
-	@cp -r $(SRC)/* $(EXT_DIR)/
-	@echo "Compiling schemas..."
-	@glib-compile-schemas $(EXT_DIR)/schemas/
+install: $(PACK_NAME)
+	@echo "Installing $(PACK_NAME)..."
+	@gnome-extensions install --force $(PACK_NAME)
 	@echo "Done. Restart GNOME Shell (log out and back in) to apply."
 
 clean:
-	@echo "Deleting $(PACK_NAME).zip"
-	@rm -f $(PACK_NAME).zip
+	@echo "Deleting $(PACK_NAME)..."
+	@rm -f $(PACK_NAME)
 
 dev: install
 	dbus-run-session gnome-shell --devkit --wayland --wayland-display=wayland-nested-0
