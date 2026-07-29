@@ -25,7 +25,6 @@ class SettingManagerClass extends GObject.Object {
                 body: _("Extension has been updated to v%d. Please review any potential breaking changes.").format(metadata.version),
                 urgency: MessageTray.Urgency.HIGH,
             });
-            Object.defineProperty(notification.source.policy, "forceExpanded", { get: () => true });
 
             notification.addAction(_("Review Changes"), () => {
                 Gio.AppInfo.launch_default_for_uri(repoUrl, null);
@@ -34,6 +33,10 @@ class SettingManagerClass extends GObject.Object {
             notification.addAction(_("Dismiss"), () => {
                 notification.destroy();
                 this._gSettings.set_int("version-cache", metadata.version);
+            });
+
+            notification.connect("destroy", (_notification, reason) => {
+                if (reason === MessageTray.NotificationDestroyedReason.DISMISSED) this._gSettings.set_int("version-cache", metadata.version);
             });
 
             systemSource.addNotification(notification);
