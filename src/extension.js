@@ -16,17 +16,15 @@ import { CalcPrayerTimes } from "./calc-prayer-times.js";
 export default class PrayerTime extends Extension {
     enable() {
         this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this));
-
         this._timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
+
         this._indicator = new Indicator(this.metadata.name);
         this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._timeFormat);
         this._indicator.setMenu(this._menu);
-
         Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
 
         this._geoclueService = null;
         this._clockSignalId = null;
-        this._prayerTimeoutId = null;
         this._soundFile = null;
         this._wakeProxy = null;
         this._wakeSignalId = null;
