@@ -84,9 +84,14 @@ msgstr ""
 msgid "Time for %s"
 msgstr ""
 
-#: src/extension.js:189
+#: src/extension.js:177
 #, javascript-format
 msgid "%s in %d minutes"
+msgstr ""
+
+#: src/extension.js:186
+#, javascript-format
+msgid "%s in %s"
 msgstr ""
 
 #: src/mawaqit-client.js:46

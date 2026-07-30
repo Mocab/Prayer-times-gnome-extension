@@ -180,9 +180,10 @@ export default class PrayerTime extends Extension {
             return;
         }
 
+        const formattedTime = `${String((minutesLeft / 60) | 0).padStart(2, "0")}:${String(minutesLeft % 60).padStart(2, "0")}`;
         this._indicator.text =
             this._settings.displayMode === "countdown"
-                ? `${nextPrayer.name} in ${String((minutesLeft / 60) | 0).padStart(2, "0")}:${String(minutesLeft % 60).padStart(2, "0")}` // | 0 same as Math.floor when x > 0
+                ? _("%s in %s").format(nextPrayer.name, formattedTime)
                 : `${nextPrayer.name} - ${nextPrayer.time.format(this._timeFormat)}`;
     }
     async _advanceToNextDay() {
