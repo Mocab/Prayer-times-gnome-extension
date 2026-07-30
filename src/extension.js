@@ -36,7 +36,7 @@ export default class PrayerTime extends Extension {
             prayers: null,
             nextPrayerI: null,
         };
-        this._init();
+        this._init().catch((e) => console.error(`[${this.metadata.name}]: Init error:`, e));
 
         // if system sleeps then reload main
         Gio.DBusProxy.new_for_bus(Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null, "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", null, (source, result) => {
@@ -55,12 +55,14 @@ export default class PrayerTime extends Extension {
         this._source = this._settings.source;
         this._schedule = await this._resolveCurrentPrayerContext();
 
+        if (!this._menu) return;
+
+        this._menu.populate(this._schedule);
+
         if (this._settings.isSoundPlayer) this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
 
         this._tick();
         this._clockSignalId = this._wallClock.connect("notify::clock", () => this._tick());
-
-        this._menu.populate(this._schedule);
     }
     async _resolveCurrentPrayerContext() {
         const now = GLib.DateTime.new_now_local();
@@ -75,16 +77,10 @@ export default class PrayerTime extends Extension {
             // edge case when new day but yesterday isha hasn't passed
             if (yesterdayTimes.isha.to_unix_usec() > nowUsec) {
                 const prayers = this._buildPrayerList(yesterdayTimes);
-                return {
-                    prayers,
-                    nextPrayerI: prayers.length - 1,
-                };
+                return { prayers, nextPrayerI: prayers.length - 1 };
             }
             // otherwise next is today fajr
-            return {
-                prayers: this._buildPrayerList(todayTimes),
-                nextPrayerI: 0,
-            };
+            return { prayers: this._buildPrayerList(todayTimes), nextPrayerI: 0 };
         }
 
         // after today isha
@@ -152,7 +148,7 @@ export default class PrayerTime extends Extension {
         return new CalcPrayerTimes(ymd, GLib.TimeZone.new_local(), this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
     }
 
-    async _tick() {
+    _tick() {
         const nextPrayer = this._schedule.prayers[this._schedule.nextPrayerI];
         const diffUsec = nextPrayer.time.to_unix_usec() - GLib.get_real_time();
 
@@ -166,11 +162,7 @@ export default class PrayerTime extends Extension {
 
             // shift to tomorrow / next prayer
             if (this._schedule.nextPrayerI === this._schedule.prayers.length - 1) {
-                this._schedule = {
-                    prayers: this._buildPrayerList(await this._getPrayerTimes(this._schedule.prayers[0].time.add_days(1))),
-                    nextPrayerI: 0,
-                };
-                this._menu.update(this._schedule);
+                this._advanceToNextDay();
             } else {
                 this._menu.highlightItem(++this._schedule.nextPrayerI);
             }
@@ -190,14 +182,25 @@ export default class PrayerTime extends Extension {
 
         this._indicator.text =
             this._settings.displayMode === "countdown"
-                ? `${nextPrayer.name} in ${((minutesLeft / 60) | 0).padStart(2, "0")}:${(minutesLeft % 60).padStart(2, "0")}` // | 0 same as Math.floor when x > 0
+                ? `${nextPrayer.name} in ${String((minutesLeft / 60) | 0).padStart(2, "0")}:${String(minutesLeft % 60).padStart(2, "0")}` // | 0 same as Math.floor when x > 0
                 : `${nextPrayer.name} - ${nextPrayer.time.format(this._timeFormat)}`;
+    }
+    async _advanceToNextDay() {
+        this._schedule = {
+            prayers: this._buildPrayerList(await this._getPrayerTimes(this._schedule.prayers[0].time.add_days(1))),
+            nextPrayerI: 0,
+        };
+        this._menu.update(this._schedule);
+        this._tick();
     }
 
     async onLocationChanged() {
         this._schedule = await this._resolveCurrentPrayerContext();
+
+        if (!this._menu) return;
         this._menu.update(this._schedule);
-        await this._tick();
+
+        this._tick();
     }
 
     _destroyGeoclue() {
@@ -206,6 +209,7 @@ export default class PrayerTime extends Extension {
             this._geoclueService = null;
         }
     }
+
     _destroyMain() {
         this._indicator.text = "...";
         this._menu.destroy();
@@ -218,16 +222,13 @@ export default class PrayerTime extends Extension {
         this._destroyGeoclue();
 
         this._source = null;
-        this._schedule = {
-            prayers: null,
-            nextPrayerI: null,
-        };
+        this._schedule = null;
 
         this._soundFile = null;
     }
     reloadMain() {
         this._destroyMain();
-        this._init();
+        this._init().catch((e) => console.error(`[${this.metadata.name}]: Reload error:`, e));
     }
 
     disable() {
