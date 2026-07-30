@@ -38,12 +38,12 @@ export default class PrayerTime extends Extension {
         };
         this._init().catch((e) => console.error(`[${this.metadata.name}]: Init error:`, e));
 
-        // if system sleeps then reload main
+        // update extension on system wake
         Gio.DBusProxy.new_for_bus(Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null, "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", null, (source, result) => {
             try {
                 this._wakeProxy = Gio.DBusProxy.new_for_bus_finish(result);
                 this._wakeSignalId = this._wakeProxy.connect("g-signal", (proxy, senderName, signalName, parameters) => {
-                    if (signalName === "PrepareForSleep" && !parameters.recursiveUnpack()[0]) this.reloadMain();
+                    if (signalName === "PrepareForSleep" && !parameters.recursiveUnpack()[0]) this.onLocationChanged();
                 });
             } catch (e) {
                 Main.notify(this.metadata.name, _("Failed to detect system sleep. Prayer times won't update automatically when your computer wakes up: %s").format(e.message));
@@ -134,7 +134,7 @@ export default class PrayerTime extends Extension {
         // try auto location if selected as a source, or if Mawaqit failed
         if (this._source === "auto") {
             try {
-                if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.onLocationChanged.bind(this));
+                if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.refreshSchedule.bind(this));
                 await this._geoclueService.start();
                 return new CalcPrayerTimes(ymd, GLib.TimeZone.new_local(), this._geoclueService.currentLocation, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
             } catch (e) {
@@ -194,7 +194,7 @@ export default class PrayerTime extends Extension {
         this._tick();
     }
 
-    async onLocationChanged() {
+    async refreshSchedule() {
         this._schedule = await this._resolveCurrentPrayerContext();
 
         if (!this._menu) return;

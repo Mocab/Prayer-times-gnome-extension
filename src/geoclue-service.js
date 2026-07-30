@@ -2,9 +2,9 @@ import Geoclue from "gi://Geoclue";
 import GObject from "gi://GObject";
 
 export class GeoclueService {
-    constructor(extensionId, onLocationChanged) {
+    constructor(extensionId, refreshSchedule) {
         this._extensionId = extensionId;
-        this._onLocationChangedMain = onLocationChanged;
+        this._refreshScheduleMain = refreshSchedule;
 
         this._geoclueProxy = null;
         this._signalId = null;
@@ -26,7 +26,7 @@ export class GeoclueService {
                     this._signalId = this._geoclueProxy.connect("notify::location", (service) => {
                         const newLocation = service.get_location();
                         this.currentLocation = { latitude: newLocation.latitude, longitude: newLocation.longitude };
-                        this._onLocationChangedMain();
+                        this._refreshScheduleMain();
                     });
 
                     resolve(this.currentLocation);
