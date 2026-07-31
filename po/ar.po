@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 17\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-07-28 22:00+0100\n"
-"PO-Revision-Date: 2026-07-28 23:00+0100\n"
+"PO-Revision-Date: 2026-07-31 12:00+0100\n"
 "Last-Translator: mocab\n"
 "Language-Team: \n"
 "Language: ar\n"
@@ -16,15 +16,15 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/extension.js:20
+#: src/extension.js:19
 msgid "%-I:%M %p"
 msgstr "%-I:%M %p"
 
-#: src/extension.js:20
+#: src/extension.js:19
 msgid "%R"
 msgstr "%R"
 
-#: src/extension.js:51
+#: src/extension.js:49
 #, javascript-format
 msgid ""
 "Failed to detect system sleep. Prayer times won't update automatically when "
@@ -33,52 +33,52 @@ msgstr ""
 "فشل رصد وضع سكون النظام. لن تُحدّث مواقيت الصلاة تلقائيًا عند "
 "استيقاظ الحاسوب: %s"
 
-#: src/extension.js:109
+#: src/extension.js:102
 msgid "Fajr"
 msgstr "الفجر"
 
-#: src/extension.js:112
+#: src/extension.js:105
 msgid "Jumaah"
 msgstr "الجمعة"
 
-#: src/extension.js:112
+#: src/extension.js:105
 msgid "Dhuhr"
 msgstr "الظهر"
 
-#: src/extension.js:115
+#: src/extension.js:108
 msgid "Asr"
 msgstr "العصر"
 
-#: src/extension.js:116
+#: src/extension.js:109
 msgid "Maghrib"
 msgstr "المغرب"
 
-#: src/extension.js:117
+#: src/extension.js:110
 msgid "Isha"
 msgstr "العشاء"
 
-#: src/extension.js:120
+#: src/extension.js:113
 msgid "Duha"
 msgstr "الضحى"
 
-#: src/extension.js:136
+#: src/extension.js:129
 #, javascript-format
 msgid ""
 "Failed to connect to Mawaqit. Defaulting to automatic location detection: %s"
 msgstr "فشل الاتصال بمواقيت. سيتم الانتقال إلى تحديد الموقع تلقائيًا: %s"
 
-#: src/extension.js:136
+#: src/extension.js:129
 #, javascript-format
 msgid "Failed to connect to Mawaqit. Defaulting to manual location: %s"
 msgstr "فشل الاتصال بمواقيت. سيتم الاعتماد على إدخال الموقع يدويًا: %s"
 
-#: src/extension.js:150
+#: src/extension.js:143
 #, javascript-format
 msgid ""
 "Failed to find location automatically. Defaulting to manual calculations: %s"
 msgstr "فشل تحديد الموقع تلقائيًا. سيتم الاعتماد على الحسابات اليدوية: %s"
 
-#: src/extension.js:165
+#: src/extension.js:158
 #, javascript-format
 msgid "Time for %s"
 msgstr "حان وقت %s"
@@ -92,6 +92,11 @@ msgstr "%s خلال %d دقيقة"
 #, javascript-format
 msgid "%s in %s"
 msgstr "%s بعد %s"
+
+#: src/extension.js:186
+#, javascript-format
+msgid "%s: %s"
+msgstr "%s: %s"
 
 #: src/mawaqit-client.js:46
 #, javascript-format
@@ -359,12 +364,12 @@ msgstr "تشغيل التكبير عند دخول وقت الصلاة"
 msgid "Number of minutes to notify before prayer"
 msgstr "عدد الدقائق للتنبيه قبل الصلاة"
 
-#: src/setting-manager.js:24
+#: src/setting-manager.js:26
 #, javascript-format
 msgid "%s Updated"
 msgstr "تم تحديث %s"
 
-#: src/setting-manager.js:25
+#: src/setting-manager.js:27
 #, javascript-format
 msgid ""
 "Extension has been updated to v%d. Please review any potential breaking "
@@ -372,10 +377,10 @@ msgid ""
 msgstr ""
 "تم تحديث الإضافة إلى الإصدار v%d. يُرجى مراجعة أي تغييرات جذرية محتملة."
 
-#: src/setting-manager.js:30
+#: src/setting-manager.js:31
 msgid "Review Changes"
 msgstr "مراجعة التغييرات"
 
-#: src/setting-manager.js:34
+#: src/setting-manager.js:35
 msgid "Dismiss"
 msgstr "إغلاق"
