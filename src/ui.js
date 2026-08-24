@@ -47,9 +47,9 @@ export class Menu extends PopupMenu.PopupMenu {
         const items = this._getMenuItems();
         if (!items[i]) return;
 
-        items[this._currentActiveIndex]?.remove_style_class_name("active");
+        items[this._currentActiveIndex]?.remove_style_class_name("prayer-next");
 
-        items[i].add_style_class_name("active");
+        items[i].add_style_class_name("prayer-next");
         this._currentActiveIndex = i;
     }
 
