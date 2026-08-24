@@ -1,7 +1,7 @@
 .prayer-name {
     padding: 0 6px;
 }
-.active {
+.prayer-next {
     font-weight: 500;
-    color: #fff;
+    color: #157347;
 }
