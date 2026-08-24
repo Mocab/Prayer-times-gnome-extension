@@ -4,6 +4,9 @@ import Soup from "gi://Soup";
 
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 
+Gio._promisify(Gio.File.prototype, "load_contents_async", "load_contents_finish");
+Gio._promisify(Soup.Session.prototype, "send_and_read_async", "send_and_read_finish");
+
 export class MawaqitClient {
     constructor(extensionName, slug) {
         this._extensionName = extensionName;
