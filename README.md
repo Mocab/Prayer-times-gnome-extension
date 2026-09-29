@@ -48,10 +48,13 @@ As always any contributions are very welcome, this project is liLah and will in 
 
 ### :hammer: Building:
 
-`make install`: installs the extension locally.<br>
-`make pack`: generates/builds a new extension.zip.<br>
-`make clean`: deletes the generated extension.zip.<br>
-`make dev`: installs the extension locally then launches a nested gnome session for testing.
+| Command        | Description                                                  |
+| :------------- | :----------------------------------------------------------- |
+| `make pack`    | Packages the extension into a `.zip` archive.                |
+| `make install` | Builds the archive and installs it locally.                  |
+| `make nested`  | Starts a nested GNOME Shell instance for testing.            |
+| `make dev`     | Builds, installs, and launches a nested session in one step. |
+| `make clean`   | Removes the generated `.zip` archive.                        |
 
 ### :trophy: Credits:
 
