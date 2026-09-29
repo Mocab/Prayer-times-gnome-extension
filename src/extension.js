@@ -43,7 +43,7 @@ export default class PrayerTime extends Extension {
             try {
                 this._wakeProxy = Gio.DBusProxy.new_for_bus_finish(result);
                 this._wakeSignalId = this._wakeProxy.connect("g-signal", (proxy, senderName, signalName, parameters) => {
-                    if (signalName === "PrepareForSleep" && !parameters.recursiveUnpack()[0]) this.onLocationChanged();
+                    if (signalName === "PrepareForSleep" && !parameters.recursiveUnpack()[0]) this.refreshSchedule();
                 });
             } catch (e) {
                 Main.notify(this.metadata.name, _("Failed to detect system sleep. Prayer times won't update automatically when your computer wakes up: %s").format(e.message));
@@ -59,7 +59,7 @@ export default class PrayerTime extends Extension {
 
         this._menu.populate(this._schedule);
 
-        if (this._settings.isSoundPlayer) this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
+        if (this._settings.isSound) this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
 
         this._tick();
         this._clockSignalId = this._wallClock.connect("notify::clock", () => this._tick());
@@ -157,8 +157,8 @@ export default class PrayerTime extends Extension {
             // notify prayer arrival
             const text = _("Time for %s").format(nextPrayer.name);
             this._indicator.text = text;
-            if (this._settings.isNotifyPrayer) Main.notify(this.metadata.name, text);
-            if (this._settings.isSoundPlayer) global.display.get_sound_player().play_from_file(this._soundFile, text, null);
+            if (this._settings.isNotify) Main.notify(this.metadata.name, text);
+            if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, text, null);
 
             // shift to tomorrow / next prayer
             if (this._schedule.nextPrayerI === this._schedule.prayers.length - 1) {
@@ -176,7 +176,7 @@ export default class PrayerTime extends Extension {
             // minutesLeft will always > 0, so this._settings.reminder > 0 && ... is redundant
             const text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder);
             this._indicator.text = text;
-            if (this._settings.isNotifyPrayer) Main.notify(this.metadata.name, text);
+            if (this._settings.isNotify) Main.notify(this.metadata.name, text);
             return;
         }
 
