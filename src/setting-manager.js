@@ -84,14 +84,15 @@ class SettingManagerClass extends GObject.Object {
             this._reloadExtensionMain();
         });
 
-        // only the indicator needs refreshing, not a full reload
-        for (const { key, prop, type } of [
+        const reloadIndicatorSettings = [
             { key: "indicator-mode", prop: "indicatorMode", type: "string" },
-            { key: "panel-position", prop: "panelPosition", type: "string" },
-        ]) {
-            this[prop] = this._gSettings[`get_${type}`](key);
+            { key: "indicator-position", prop: "indicatorPosition", type: "string" },
+        ];
+        for (const { key, prop, type } of reloadIndicatorSettings) {
+            const getter = `get_${type}`;
+            this[prop] = this._gSettings[getter](key);
             this._gSettingListener[prop] = this._gSettings.connect(`changed::${key}`, (gSettings) => {
-                this[prop] = gSettings[`get_${type}`](key);
+                this[prop] = gSettings[getter](key);
                 this._refreshIndicator();
             });
         }

@@ -120,8 +120,8 @@
                 <default>false</default>
                 <description>Compatibility setting migrated to indicator-mode</description>
             </key>
-            <key name="panel-position" type="s">
-                <summary>Panel position</summary>
+            <key name="indicator-position" type="s">
+                <summary>Indicator position</summary>
                 <default>'center'</default>
                 <choices>
                     <choice value='far-left'/>

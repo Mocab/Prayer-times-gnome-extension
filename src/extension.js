@@ -65,7 +65,7 @@ export default class PrayerTime extends Extension {
             center: [Main.panel._centerBox, 1],
             right: [Main.panel._rightBox, 0],
             "far-right": [Main.panel._rightBox, -1],
-        }[this._settings.panelPosition];
+        }[this._settings.indicatorPosition];
 
         container.get_parent().remove_child(container);
         box.insert_child_at_index(container, index);
