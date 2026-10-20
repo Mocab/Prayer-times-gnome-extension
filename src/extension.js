@@ -22,9 +22,8 @@ export default class PrayerTime extends Extension {
         this._indicator = new Indicator(this.metadata.name, this.path);
         this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._timeFormat);
         this._indicator.setMenu(this._menu);
-        const position = this._settings.indicatorPosition;
         const index = this._settings.indicatorIndex;
-        Main.panel.addToStatusArea(this.uuid, this._indicator, index, position);
+        Main.panel.addToStatusArea(this.uuid, this._indicator, index, this._settings.indicatorAlignment);
         this._connectPanelBoxSignals();
 
         this._geoclueService = null;
@@ -59,19 +58,18 @@ export default class PrayerTime extends Extension {
         });
     }
 
-    _getBox(position) {
+    _getBox(alignment) {
         return {
             left: Main.panel._leftBox,
             center: Main.panel._centerBox,
             right: Main.panel._rightBox,
-        }[position];
+        }[alignment];
     }
 
     _placeIndicator() {
         const container = this._indicator.container;
-        const position = this._settings.indicatorPosition;
         const index = this._settings.indicatorIndex;
-        const box = this._getBox(position);
+        const box = this._getBox(this._settings.indicatorAlignment);
         if (!box) return;
 
         const currentParent = container.get_parent();
@@ -89,7 +87,7 @@ export default class PrayerTime extends Extension {
         this._panelBox?.disconnectObject(this);
         this._panelBox = null;
 
-        const box = this._getBox(this._settings.indicatorPosition);
+        const box = this._getBox(this._settings.indicatorAlignment);
         if (!box) return;
 
         const onChildrenChanged = (_box, actor) => {

@@ -409,17 +409,17 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         group.add(indicatorStyleRow);
         this.#bindMapping(gSettings, "indicator-style", indicatorStyleRow, indicatorStyles);
 
-        const indicatorPositions = [
+        const indicatorAlignments = [
             { id: "left", name: _("Left") },
             { id: "center", name: _("Center") },
             { id: "right", name: _("Right") },
         ];
-        const indicatorPositionRow = new Adw.ComboRow({
-            title: _("Indicator position"),
-            model: new Gtk.StringList({ strings: indicatorPositions.map((p) => p.name) }),
+        const indicatorAlignmentRow = new Adw.ComboRow({
+            title: _("Indicator alignment"),
+            model: new Gtk.StringList({ strings: indicatorAlignments.map((p) => p.name) }),
         });
-        group.add(indicatorPositionRow);
-        this.#bindMapping(gSettings, "indicator-position", indicatorPositionRow, indicatorPositions);
+        group.add(indicatorAlignmentRow);
+        this.#bindMapping(gSettings, "indicator-alignment", indicatorAlignmentRow, indicatorAlignments);
 
         const indicatorIndexRow = new Adw.SpinRow({
             title: _("Indicator index"),

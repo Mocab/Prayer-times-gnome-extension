@@ -114,15 +114,15 @@
                 </choices>
                 <description>How the next prayer is displayed in the indicator</description>
             </key>
-            <key name="indicator-position" type="s">
-                <summary>Indicator position</summary>
-                <default>'right'</default>
+            <key name="indicator-alignment" type="s">
+                <summary>Indicator alignment</summary>
+                <default>'center'</default>
                 <choices>
                     <choice value='left'/>
                     <choice value='center'/>
                     <choice value='right'/>
                 </choices>
-                <description>Which panel box the indicator is placed in</description>
+                <description>Which panel section the indicator is placed in</description>
             </key>
             <key name="indicator-index" type="i">
                 <summary>Indicator index</summary>
