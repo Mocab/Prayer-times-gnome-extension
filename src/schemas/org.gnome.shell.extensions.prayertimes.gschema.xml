@@ -122,15 +122,19 @@
             </key>
             <key name="indicator-position" type="s">
                 <summary>Indicator position</summary>
-                <default>'center'</default>
+                <default>'right'</default>
                 <choices>
-                    <choice value='far-left'/>
                     <choice value='left'/>
                     <choice value='center'/>
                     <choice value='right'/>
-                    <choice value='far-right'/>
                 </choices>
-                <description>Where the indicator is placed in the top bar</description>
+                <description>Which panel box the indicator is placed in</description>
+            </key>
+            <key name="indicator-index" type="i">
+                <summary>Indicator index</summary>
+                <default>0</default>
+                <range min="0" max="20"/>
+                <description>Position within the chosen box. 0 = first (leftmost), positive = from start</description>
             </key>
 
             <key name="notify-prayer" type="b">

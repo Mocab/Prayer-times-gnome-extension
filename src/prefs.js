@@ -414,11 +414,9 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         this.#bindMapping(gSettings, "indicator-mode", indicatorModeRow, indicatorModes);
 
         const indicatorPositions = [
-            { id: "far-left", name: _("Far left") },
             { id: "left", name: _("Left") },
             { id: "center", name: _("Center") },
             { id: "right", name: _("Right") },
-            { id: "far-right", name: _("Far right") },
         ];
         const indicatorPositionRow = new Adw.ComboRow({
             title: _("Indicator position"),
@@ -426,6 +424,14 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         group.add(indicatorPositionRow);
         this.#bindMapping(gSettings, "indicator-position", indicatorPositionRow, indicatorPositions);
+
+        const indicatorIndexRow = new Adw.SpinRow({
+            title: _("Indicator index"),
+            subtitle: _("Position within the box. 0 = first (leftmost), positive = from start."),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 20, step_increment: 1 }),
+        });
+        group.add(indicatorIndexRow);
+        gSettings.bind("indicator-index", indicatorIndexRow, "value", Gio.SettingsBindFlags.DEFAULT);
 
         return group;
     }

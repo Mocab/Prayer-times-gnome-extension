@@ -22,8 +22,10 @@ export default class PrayerTime extends Extension {
         this._indicator = new Indicator(this.metadata.name, this.path);
         this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._timeFormat);
         this._indicator.setMenu(this._menu);
-        Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
-        this._placeIndicator();
+        const position = this._settings.indicatorPosition;
+        const index = this._settings.indicatorIndex;
+        Main.panel.addToStatusArea(this.uuid, this._indicator, index, position);
+        this._connectPanelBoxSignals();
 
         this._geoclueService = null;
         this._clockSignalId = null;
@@ -57,18 +59,48 @@ export default class PrayerTime extends Extension {
         });
     }
 
+    _getBox(position) {
+        return {
+            left: Main.panel._leftBox,
+            center: Main.panel._centerBox,
+            right: Main.panel._rightBox,
+        }[position];
+    }
+
     _placeIndicator() {
         const container = this._indicator.container;
-        const [box, index] = {
-            "far-left": [Main.panel._leftBox, 0],
-            left: [Main.panel._leftBox, -1],
-            center: [Main.panel._centerBox, 1],
-            right: [Main.panel._rightBox, 0],
-            "far-right": [Main.panel._rightBox, -1],
-        }[this._settings.indicatorPosition];
+        const position = this._settings.indicatorPosition;
+        const index = this._settings.indicatorIndex;
+        const box = this._getBox(position);
+        if (!box) return;
 
-        container.get_parent().remove_child(container);
+        const currentParent = container.get_parent();
+        if (currentParent === box) {
+            const children = box.get_children();
+            const target = Math.min(index, children.length - 1);
+            if (children.indexOf(container) !== target)
+                box.set_child_at_index(container, target);
+            return;
+        }
+        if (currentParent) currentParent.remove_child(container);
         box.insert_child_at_index(container, index);
+    }
+
+    _connectPanelBoxSignals() {
+        this._panelBox?.disconnectObject(this);
+        this._panelBox = null;
+
+        const box = this._getBox(this._settings.indicatorPosition);
+        if (!box) return;
+
+        const onChildrenChanged = (_box, actor) => {
+            const myContainer = this._indicator?.container ?? this._indicator;
+            if (myContainer && actor !== myContainer)
+                this._placeIndicator();
+        };
+        box.connectObject('child-added', onChildrenChanged, this);
+        box.connectObject('child-removed', onChildrenChanged, this);
+        this._panelBox = box;
     }
 
     async _init() {
@@ -285,6 +317,9 @@ export default class PrayerTime extends Extension {
     }
 
     disable() {
+        this._panelBox?.disconnectObject(this);
+        this._panelBox = null;
+
         if (this._wakeProxy) {
             if (this._wakeSignalId) {
                 this._wakeProxy.disconnect(this._wakeSignalId);
