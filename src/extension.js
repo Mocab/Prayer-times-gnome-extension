@@ -78,8 +78,7 @@ export default class PrayerTime extends Extension {
         if (currentParent === box) {
             const children = box.get_children();
             const target = Math.min(index, children.length - 1);
-            if (children.indexOf(container) !== target)
-                box.set_child_at_index(container, target);
+            if (children.indexOf(container) !== target) box.set_child_at_index(container, target);
             return;
         }
         if (currentParent) currentParent.remove_child(container);
@@ -95,11 +94,10 @@ export default class PrayerTime extends Extension {
 
         const onChildrenChanged = (_box, actor) => {
             const myContainer = this._indicator?.container ?? this._indicator;
-            if (myContainer && actor !== myContainer)
-                this._placeIndicator();
+            if (myContainer && actor !== myContainer) this._placeIndicator();
         };
-        box.connectObject('child-added', onChildrenChanged, this);
-        box.connectObject('child-removed', onChildrenChanged, this);
+        box.connectObject("child-added", onChildrenChanged, this);
+        box.connectObject("child-removed", onChildrenChanged, this);
         this._panelBox = box;
     }
 

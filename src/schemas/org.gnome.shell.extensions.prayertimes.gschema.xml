@@ -115,11 +115,6 @@
                 </choices>
                 <description>Choose how the next prayer appears in the top bar</description>
             </key>
-            <key name="compact-display" type="b">
-                <summary>Legacy compact display setting</summary>
-                <default>false</default>
-                <description>Compatibility setting migrated to indicator-mode</description>
-            </key>
             <key name="indicator-position" type="s">
                 <summary>Indicator position</summary>
                 <default>'right'</default>

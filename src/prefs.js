@@ -8,10 +8,6 @@ import { ExtensionPreferences, gettext as _ } from "resource:///org/gnome/Shell/
 export default class PrayerTimePreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const gSettings = this.getSettings();
-        if (!gSettings.get_user_value("indicator-mode")) {
-            const legacyMode = gSettings.get_boolean("compact-display") ? "compact" : "normal";
-            gSettings.set_string("indicator-mode", legacyMode);
-        }
 
         // tab 1: calculations
         const calcTab = new Adw.PreferencesPage({
