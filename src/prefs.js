@@ -397,13 +397,13 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         this.#bindMapping(gSettings, "display-mode", displayModeRow, displayModes);
 
         const indicatorStyles = [
-            { id: "compact", name: _("Compact") },
-            { id: "normal", name: _("Normal") },
-            { id: "normal-with-icon", name: _("Normal + icon") },
+            { id: "name", name: _("Name") },
+            { id: "icon", name: _("Icon") },
+            { id: "both", name: _("Icon & name") },
         ];
         const indicatorStyleRow = new Adw.ComboRow({
-            title: _("Indicator layout"),
-            subtitle: _("Choose how the next prayer appears in the top bar."),
+            title: _("Indicator style"),
+            subtitle: _("How the next prayer is displayed in the indicator."),
             model: new Gtk.StringList({ strings: indicatorStyles.map((mode) => mode.name) }),
         });
         group.add(indicatorStyleRow);

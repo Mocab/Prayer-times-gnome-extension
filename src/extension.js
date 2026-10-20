@@ -203,9 +203,7 @@ export default class PrayerTime extends Extension {
         const diffUsec = nextPrayer.time.to_unix_usec() - GLib.get_real_time();
 
         const isArrived = diffUsec <= 3e6; // three second buffer
-        const indicatorStyle = this._settings.indicatorStyle;
-        const isCompact = indicatorStyle === "compact";
-        this._indicator.icon = indicatorStyle === "normal-with-icon" || isCompact ? nextPrayer.id : null;
+        this._indicator.icon = this._settings.indicatorStyle === "both" || this._settings.indicatorStyle === "icon" ? nextPrayer.id : null;
 
         if (isArrived) {
             // notify prayer arrival

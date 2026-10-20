@@ -105,14 +105,14 @@
                 <description>Display next prayer as a countdown or fixed time</description>
             </key>
             <key name="indicator-style" type="s">
-                <summary>Indicator layout</summary>
-                <default>'normal'</default>
+                <summary>Indicator style</summary>
+                <default>'name'</default>
                 <choices>
-                    <choice value='compact'/>
-                    <choice value='normal'/>
-                    <choice value='normal-with-icon'/>
+                    <choice value='name'/>
+                    <choice value='icon'/>
+                    <choice value='both'/>
                 </choices>
-                <description>Choose how the next prayer appears in the top bar</description>
+                <description>How the next prayer is displayed in the indicator</description>
             </key>
             <key name="indicator-position" type="s">
                 <summary>Indicator position</summary>
