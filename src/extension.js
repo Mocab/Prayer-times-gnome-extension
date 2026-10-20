@@ -22,8 +22,7 @@ export default class PrayerTime extends Extension {
         this._indicator = new Indicator(this.metadata.name, this.path);
         this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._timeFormat);
         this._indicator.setMenu(this._menu);
-        const index = this._settings.indicatorIndex;
-        Main.panel.addToStatusArea(this.uuid, this._indicator, index, this._settings.indicatorAlignment);
+        Main.panel.addToStatusArea(this.uuid, this._indicator, this._settings.indicatorOrder, this._settings.indicatorAlignment);
         this._connectPanelBoxSignals();
 
         this._geoclueService = null;
@@ -68,15 +67,13 @@ export default class PrayerTime extends Extension {
 
     _placeIndicator() {
         const container = this._indicator.container;
-        const index = this._settings.indicatorIndex;
+        const index = this._settings.indicatorOrder;
         const box = this._getBox(this._settings.indicatorAlignment);
         if (!box) return;
 
         const currentParent = container.get_parent();
         if (currentParent === box) {
-            const children = box.get_children();
-            const target = Math.min(index, children.length - 1);
-            if (children.indexOf(container) !== target) box.set_child_at_index(container, target);
+            box.set_child_at_index(container, index);
             return;
         }
         if (currentParent) currentParent.remove_child(container);

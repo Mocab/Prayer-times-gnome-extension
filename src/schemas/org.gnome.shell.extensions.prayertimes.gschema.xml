@@ -124,11 +124,11 @@
                 </choices>
                 <description>Which panel section the indicator is placed in</description>
             </key>
-            <key name="indicator-index" type="i">
-                <summary>Indicator index</summary>
-                <default>0</default>
-                <range min="0" max="20"/>
-                <description>Position within the chosen box. 0 = first (leftmost), positive = from start</description>
+            <key name="indicator-order" type="i">
+                <summary>Indicator order</summary>
+                <default>1</default>
+                <range min="0" max="10"/>
+                <description>Order within the panel section (0 = leftmost, 10 = rightmost)</description>
             </key>
 
             <key name="notify-prayer" type="b">

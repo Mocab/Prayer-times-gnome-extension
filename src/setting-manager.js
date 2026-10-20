@@ -82,7 +82,7 @@ class SettingManagerClass extends GObject.Object {
         const reloadIndicatorSettings = [
             { key: "indicator-style", prop: "indicatorStyle", type: "string" },
             { key: "indicator-alignment", prop: "indicatorAlignment", type: "string" },
-            { key: "indicator-index", prop: "indicatorIndex", type: "int" },
+            { key: "indicator-order", prop: "indicatorOrder", type: "int" },
         ];
         for (const { key, prop, type } of reloadIndicatorSettings) {
             const getter = `get_${type}`;
