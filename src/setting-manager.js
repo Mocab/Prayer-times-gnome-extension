@@ -80,7 +80,7 @@ class SettingManagerClass extends GObject.Object {
         });
 
         const reloadIndicatorSettings = [
-            { key: "indicator-mode", prop: "indicatorMode", type: "string" },
+            { key: "indicator-style", prop: "indicatorStyle", type: "string" },
             { key: "indicator-position", prop: "indicatorPosition", type: "string" },
             { key: "indicator-index", prop: "indicatorIndex", type: "int" },
         ];

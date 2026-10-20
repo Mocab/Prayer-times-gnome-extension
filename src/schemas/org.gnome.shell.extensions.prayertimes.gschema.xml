@@ -104,8 +104,7 @@
                 </choices>
                 <description>Display next prayer as a countdown or fixed time</description>
             </key>
-            
-            <key name="indicator-mode" type="s">
+            <key name="indicator-style" type="s">
                 <summary>Indicator layout</summary>
                 <default>'normal'</default>
                 <choices>
