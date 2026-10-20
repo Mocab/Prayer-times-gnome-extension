@@ -198,7 +198,8 @@ export default class PrayerTime extends Extension {
         const diffUsec = nextPrayer.time.to_unix_usec() - GLib.get_real_time();
 
         const isArrived = diffUsec <= 3e6; // three second buffer
-        this._indicator.icon = this._settings.indicatorStyle === "both" || this._settings.indicatorStyle === "icon" ? nextPrayer.id : null;
+        const isStyleIcon = this._settings.indicatorStyle === "icon";
+        this._indicator.icon = this._settings.indicatorStyle === "both" || isStyleIcon ? nextPrayer.id : null;
 
         if (isArrived) {
             // notify prayer arrival
@@ -241,7 +242,7 @@ export default class PrayerTime extends Extension {
         const countdown = `${String((minutesLeft / 60) | 0).padStart(2, "0")}:${String(minutesLeft % 60).padStart(2, "0")}`;
         const time = nextPrayer.time.format(this._timeFormat);
 
-        if (isCompact) this._indicator.text = isCountdown ? _("in %s").format(countdown) : time;
+        if (isStyleIcon) this._indicator.text = isCountdown ? _("in %s").format(countdown) : time;
         else this._indicator.text = isCountdown ? _("%s in %s").format(nextPrayer.name, countdown) : _("%s: %s").format(nextPrayer.name, time);
     }
     async _advanceToNextDay() {
