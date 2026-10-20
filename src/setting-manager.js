@@ -9,13 +9,13 @@ import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 
 class SettingManagerClass extends GObject.Object {
-    _init(gSettings, metadata, reloadMain, refreshIndicator) {
+    _init(gSettings, metadata, reloadMain, updateIndicatorPosition) {
         super._init();
         this._gSettings = gSettings;
         this._gSettingListener = {};
         this._desktopSettings = Gio.Settings.new("org.gnome.desktop.interface");
         this._reloadExtensionMain = reloadMain;
-        this._refreshIndicator = refreshIndicator;
+        this._updateIndicatorPosition = updateIndicatorPosition;
 
         const versionCache = this._gSettings.get_int("version-cache");
         if (versionCache < metadata.version) {
@@ -79,17 +79,17 @@ class SettingManagerClass extends GObject.Object {
             this._reloadExtensionMain();
         });
 
-        const reloadIndicatorSettings = [
+        const updateIndicatorPositionSettings = [
             { key: "indicator-style", prop: "indicatorStyle", type: "string" },
             { key: "indicator-alignment", prop: "indicatorAlignment", type: "string" },
             { key: "indicator-order", prop: "indicatorOrder", type: "int" },
         ];
-        for (const { key, prop, type } of reloadIndicatorSettings) {
+        for (const { key, prop, type } of updateIndicatorPositionSettings) {
             const getter = `get_${type}`;
             this[prop] = this._gSettings[getter](key);
             this._gSettingListener[prop] = this._gSettings.connect(`changed::${key}`, (gSettings) => {
                 this[prop] = gSettings[getter](key);
-                this._refreshIndicator();
+                this._updateIndicatorPosition();
             });
         }
 

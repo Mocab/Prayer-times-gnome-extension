@@ -16,7 +16,7 @@ import { CalcPrayerTimes } from "./calc-prayer-times.js";
 
 export default class PrayerTime extends Extension {
     enable() {
-        this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this), this.refreshIndicator.bind(this));
+        this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this), this.updateIndicatorPosition.bind(this));
         this._timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
 
         this._indicator = new Indicator(this.metadata.name, this.path);
@@ -54,29 +54,6 @@ export default class PrayerTime extends Extension {
                 Main.notify(this.metadata.name, _("Failed to detect system sleep. Prayer times won't update automatically when your computer wakes up: %s").format(e.message));
             }
         });
-    }
-
-    _getBox(alignment) {
-        return {
-            left: Main.panel._leftBox,
-            center: Main.panel._centerBox,
-            right: Main.panel._rightBox,
-        }[alignment];
-    }
-
-    _placeIndicator() {
-        const container = this._indicator.container;
-        const index = this._settings.indicatorOrder;
-        const box = this._getBox(this._settings.indicatorAlignment);
-        if (!box) return;
-
-        const currentParent = container.get_parent();
-        if (currentParent === box) {
-            box.set_child_at_index(container, index);
-            return;
-        }
-        if (currentParent) currentParent.remove_child(container);
-        box.insert_child_at_index(container, index);
     }
 
     async _init() {
@@ -237,8 +214,21 @@ export default class PrayerTime extends Extension {
         this._tick();
     }
 
-    refreshIndicator() {
-        this._placeIndicator();
+    updateIndicatorPosition() {
+        const container = this._indicator.indicatorContainer;
+
+        const targetBox = Main.panel[`_${this._settings.indicatorAlignment}Box`];
+        if (!targetBox) return;
+
+        const currentBox = container.get_parent();
+
+        if (currentBox === targetBox) {
+            targetBox.set_child_at_index(container, this._settings.indicatorOrder);
+        } else {
+            currentBox?.remove_child(container);
+            targetBox.insert_child_at_index(container, this._settings.indicatorOrder);
+        }
+
         if (this._clockSignalId) this._tick(); // once the schedule is loaded
     }
 
