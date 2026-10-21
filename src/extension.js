@@ -215,7 +215,7 @@ export default class PrayerTime extends Extension {
     }
 
     updateIndicatorPosition() {
-        const container = this._indicator.indicatorContainer;
+        const container = this._indicator.container;
 
         const targetBox = Main.panel[`_${this._settings.indicatorAlignment}Box`];
         if (!targetBox) return;

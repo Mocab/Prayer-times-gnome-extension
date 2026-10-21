@@ -424,7 +424,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         const indicatorOrderRow = new Adw.SpinRow({
             title: _("Indicator order"),
             subtitle: _("Order within the panel section (0 = leftmost, 10 = rightmost)."),
-            adjustment: new Gtk.Adjustment({ lower: 0, upper: 20, step_increment: 1 }),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 10, step_increment: 1 }),
         });
         group.add(indicatorOrderRow);
         gSettings.bind("indicator-order", indicatorOrderRow, "value", Gio.SettingsBindFlags.DEFAULT);
