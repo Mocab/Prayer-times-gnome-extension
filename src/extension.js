@@ -24,7 +24,7 @@ export default class PrayerTime extends Extension {
         this._indicator.setMenu(this._menu);
         Main.panel.addToStatusArea(this.uuid, this._indicator, this._settings.indicatorOrder, this._settings.indicatorAlignment);
 
-        this._notifier = new NotificationManager(this.metadata.name, this._settings, this.path, this._timeFormat);
+        this._notifier = new NotificationManager(this.metadata.name, this._settings, this.path);
 
         this._geoclueService = null;
         this._clockSignalId = null;

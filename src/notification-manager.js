@@ -4,10 +4,9 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
 export class NotificationManager {
-    constructor(extensionName, settings, basePath, timeFormat) {
+    constructor(extensionName, settings, basePath) {
         this._settings = settings;
         this._basePath = basePath;
-        this._timeFormat = timeFormat;
 
         this._notificationSource = new MessageTray.Source({
             title: extensionName,
@@ -21,7 +20,7 @@ export class NotificationManager {
     }
 
     notifyReminder(prayer) {
-        this._triggerNotification(prayer, _("Upcoming prayer"), _("%s is in %d minutes (%s).").format(prayer.name, this._settings.reminder, prayer.time.format(this._timeFormat)));
+        this._triggerNotification(prayer, _("%s Reminder").format(prayer.name), _("Begins in %d minutes.").format(this._settings.reminder));
     }
 
     _triggerNotification(prayer, title, body) {
