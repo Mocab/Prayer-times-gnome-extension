@@ -78,9 +78,11 @@ export class Menu extends PopupMenu.PopupMenu {
 }
 
 class IndicatorClass extends PanelMenu.Button {
-    _init(extensionName, basePath) {
+    _init(extensionName, settings, basePath, timeFormat) {
         super._init(0.5, extensionName, true);
+        this._settings = settings;
         this._basePath = basePath;
+        this._timeFormat = timeFormat;
         this._prayerId = null;
         this._icon = null;
 
@@ -97,10 +99,10 @@ class IndicatorClass extends PanelMenu.Button {
         this.add_child(this._box);
     }
 
-    set icon(prayerId) {
-        this._prayerId = prayerId;
-
-        if (prayerId) {
+    icon(prayerId) {
+        if (this._settings.indicatorStyle !== "text" && prayerId) {
+            if (this._prayerId === prayerId && this._icon) return;
+            this._prayerId = prayerId;
             // TODO: in the settings-manager refactor move to a changed::indicator-style signal and call this on class init if enabled
             if (!this._icon) {
                 this._icon = new St.Icon({ icon_size: 16 });
@@ -108,6 +110,7 @@ class IndicatorClass extends PanelMenu.Button {
             }
             this._icon.gicon = Gio.icon_new_for_string(`${this._basePath}/assets/icons/${prayerId}.svg`);
         } else if (this._icon) {
+            this._prayerId = null;
             this._box.remove_child(this._icon);
             this._icon.destroy();
             this._icon = null;
@@ -116,6 +119,25 @@ class IndicatorClass extends PanelMenu.Button {
 
     set text(value) {
         if (this._label.text !== value) this._label.set_text(value);
+    }
+
+    setArrival(prayerName) {
+        this.text = _("Time for %s").format(prayerName);
+    }
+
+    setReminder(prayerName, minutesLeft) {
+        this.text = _("%s in %d minutes").format(prayerName, minutesLeft);
+    }
+
+    setUpcoming(prayer, minutesLeft = 0) {
+        const formattedTime = this._formatTime(prayer, minutesLeft);
+        this.text = this._settings.indicatorStyle === "icon" ? formattedTime : _("%s %s").format(prayer.name, formattedTime);
+    }
+    _formatTime(prayer, minutesLeft) {
+        if (this._settings.displayMode === "time") return prayer.time.format(this._timeFormat);
+
+        const reminder = minutesLeft % 60;
+        return `${(minutesLeft / 60) | 0}h ${reminder < 10 ? "0" + reminder : reminder}m`;
     }
 }
 export const Indicator = GObject.registerClass(IndicatorClass);

@@ -19,7 +19,7 @@ export default class PrayerTime extends Extension {
         this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this), this.updateIndicatorPosition.bind(this));
         this._timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
 
-        this._indicator = new Indicator(this.metadata.name, this.path);
+        this._indicator = new Indicator(this.metadata.name, this.path, this._settings, this._timeFormat);
         this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._timeFormat);
         this._indicator.setMenu(this._menu);
         Main.panel.addToStatusArea(this.uuid, this._indicator, this._settings.indicatorOrder, this._settings.indicatorAlignment);
@@ -158,12 +158,11 @@ export default class PrayerTime extends Extension {
         const diffUsec = nextPrayer.time.to_unix_usec() - GLib.get_real_time();
 
         const isArrived = diffUsec <= 3e6; // three second buffer
-        const isStyleIcon = this._settings.indicatorStyle === "icon";
-        this._indicator.icon = this._settings.indicatorStyle === "both" || isStyleIcon ? nextPrayer.id : null;
-
+        // TODO: optimise so it doesn't run every tick
+        this._indicator.icon(nextPrayer.id);
         if (isArrived) {
             // notify prayer arrival
-            this._indicator.text = _("Time for %s").format(nextPrayer.name);
+            this._indicator.setArrival(nextPrayer.name);
             const prayerTime = nextPrayer.time.to_unix_usec();
             if (this._lastArrivedPrayerTime === prayerTime) return;
             this._lastArrivedPrayerTime = prayerTime;
@@ -185,7 +184,7 @@ export default class PrayerTime extends Extension {
         // prayer reminder
         if (minutesLeft === this._settings.reminder) {
             // minutesLeft will always > 0, so this._settings.reminder > 0 && ... is redundant
-            this._indicator.text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder);
+            this._indicator.setReminder(nextPrayer.name, this._settings.reminder);
             const prayerTime = nextPrayer.time.to_unix_usec();
             if (this._lastReminderTime !== prayerTime) {
                 this._lastReminderTime = prayerTime;
@@ -194,12 +193,7 @@ export default class PrayerTime extends Extension {
             return;
         }
 
-        const isCountdown = this._settings.displayMode === "countdown";
-        const countdown = `${String((minutesLeft / 60) | 0).padStart(2, "0")}:${String(minutesLeft % 60).padStart(2, "0")}`;
-        const time = nextPrayer.time.format(this._timeFormat);
-
-        if (isStyleIcon) this._indicator.text = isCountdown ? _("in %s").format(countdown) : time;
-        else this._indicator.text = isCountdown ? _("%s in %s").format(nextPrayer.name, countdown) : _("%s: %s").format(nextPrayer.name, time);
+        this._indicator.setUpcoming(nextPrayer, minutesLeft);
     }
     async _advanceToNextDay() {
         this._schedule = {
