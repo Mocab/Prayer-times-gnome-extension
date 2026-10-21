@@ -8,9 +8,8 @@ import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 
 export class Menu extends PopupMenu.PopupMenu {
-    constructor(sourceActor, arrowAlignment, arrowSide, basePath, timeFormat) {
+    constructor(sourceActor, arrowAlignment, arrowSide, timeFormat) {
         super(sourceActor, arrowAlignment, arrowSide);
-        this.basePath = basePath;
         this._currentActiveIndex = null;
         this._timeFormat = timeFormat;
     }
@@ -19,24 +18,10 @@ export class Menu extends PopupMenu.PopupMenu {
         for (const prayer of schedule.prayers) {
             const menuItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, activate: false, hover: false });
 
-            menuItem.add_child(
-                new St.Icon({
-                    gicon: Gio.icon_new_for_string(`${this.basePath}/assets/icons/${prayer.id}.svg`),
-                    icon_size: 20,
-                }),
-            );
-            menuItem.add_child(
-                new St.Label({
-                    text: prayer.name,
-                    style_class: "prayer-name",
-                }),
-            );
+            menuItem.add_child(new St.Icon({ gicon: prayer.icon, icon_size: 20 }));
+            menuItem.add_child(new St.Label({ text: prayer.name, style_class: "prayer-name" }));
             menuItem.add_child(new St.Widget({ x_expand: true }));
-            menuItem.add_child(
-                new St.Label({
-                    text: prayer.time.format(this._timeFormat),
-                }),
-            );
+            menuItem.add_child(new St.Label({ text: prayer.time.format(this._timeFormat) }));
 
             this.addMenuItem(menuItem);
         }
@@ -78,10 +63,9 @@ export class Menu extends PopupMenu.PopupMenu {
 }
 
 class IndicatorClass extends PanelMenu.Button {
-    _init(extensionName, settings, basePath, timeFormat) {
+    _init(extensionName, settings, timeFormat) {
         super._init(0.5, extensionName, true);
         this._settings = settings;
-        this._basePath = basePath;
         this._timeFormat = timeFormat;
         this._prayerId = null;
         this._icon = null;
@@ -92,22 +76,22 @@ class IndicatorClass extends PanelMenu.Button {
         });
 
         this._box = new St.BoxLayout({
-            style: "padding: 0px 12px;"
+            style: "padding: 0px 12px;",
         });
         this._box.add_child(this._label);
         this.add_child(this._box);
     }
 
-    icon(prayerId) {
-        if (this._settings.indicatorStyle !== "name" && prayerId) {
-            if (this._prayerId === prayerId && this._icon) return;
-            this._prayerId = prayerId;
+    icon(prayer) {
+        if (this._settings.indicatorStyle !== "name" && prayer.id) {
+            if (this._prayerId === prayer.id && this._icon) return;
+            this._prayerId = prayer.id;
             // TODO: in the settings-manager refactor move to a changed::indicator-style signal and call this on class init if enabled
             if (!this._icon) {
-                this._icon = new St.Icon({ icon_size: 16 , style: "margin-right: 6px"});
+                this._icon = new St.Icon({ icon_size: 16, style: "margin-right: 6px" });
                 this._box.insert_child_at_index(this._icon, 0);
             }
-            this._icon.gicon = Gio.icon_new_for_string(`${this._basePath}/assets/icons/${prayerId}.svg`);
+            this._icon.gicon = prayer.icon;
         } else if (this._icon) {
             this._prayerId = null;
             this._box.remove_child(this._icon);

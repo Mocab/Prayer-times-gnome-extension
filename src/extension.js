@@ -19,12 +19,12 @@ export default class PrayerTime extends Extension {
         this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this), this.updateIndicatorPosition.bind(this));
         this._timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
 
-        this._indicator = new Indicator(this.metadata.name, this._settings, this.path, this._timeFormat);
-        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._timeFormat);
+        this._indicator = new Indicator(this.metadata.name, this._settings, this._timeFormat);
+        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this._timeFormat);
         this._indicator.setMenu(this._menu);
         Main.panel.addToStatusArea(this.uuid, this._indicator, this._settings.indicatorOrder, this._settings.indicatorAlignment);
 
-        this._notifier = new NotificationManager(this.metadata.name, this._settings, this.path);
+        this._notifier = new NotificationManager(this.metadata.name, this._settings);
 
         this._geoclueService = null;
         this._clockSignalId = null;
@@ -104,18 +104,19 @@ export default class PrayerTime extends Extension {
     }
 
     _buildPrayerList(prayerTimes) {
-        const fajr = { id: "fajr", name: _("Fajr"), time: prayerTimes.fajr ?? null };
-        const dhuhr = {
-            id: "dhuhr",
-            name: prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"),
-            time: prayerTimes.dhuhr ?? null,
-        };
-        const asr = { id: "asr", name: _("Asr"), time: prayerTimes.asr ?? null };
-        const maghrib = { id: "maghrib", name: _("Maghrib"), time: prayerTimes.maghrib ?? null };
-        const isha = { id: "isha", name: _("Isha"), time: prayerTimes.isha ?? null };
+        // TODO: update only time when moving to a new day instead of recreating the array
+        const iconPath = this.path + "/assets/icons/";
+        const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null, icon: Gio.icon_new_for_string(iconPath + id + ".svg") });
 
-        if (!this._settings.isIncludeSunnah) return [fajr, dhuhr, asr, maghrib, isha];
-        return [fajr, { id: "duha", name: _("Duha"), time: prayerTimes.duha ?? null }, dhuhr, asr, maghrib, isha];
+        const fajr = prayer("fajr", _("Fajr"));
+        const dhuhr = prayer("dhuhr", prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"));
+        const asr = prayer("asr", _("Asr"));
+        const maghrib = prayer("maghrib", _("Maghrib"));
+        const isha = prayer("isha", _("Isha"));
+
+        return this._settings.isIncludeSunnah //
+            ? [fajr, prayer("duha", _("Duha")), dhuhr, asr, maghrib, isha]
+            : [fajr, dhuhr, asr, maghrib, isha];
     }
 
     async _getPrayerTimes(dateTime, cache = { mawaqitClient: null }) {
@@ -159,7 +160,7 @@ export default class PrayerTime extends Extension {
 
         const isArrived = diffUsec <= 3e6; // three second buffer
         // TODO: optimise so it doesn't run every tick
-        this._indicator.icon(nextPrayer.id);
+        this._indicator.icon(nextPrayer);
         if (isArrived) {
             // notify prayer arrival
             this._indicator.setArrival(nextPrayer.name);

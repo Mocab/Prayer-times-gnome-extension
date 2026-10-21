@@ -1,12 +1,10 @@
-import Gio from "gi://Gio";
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
 export class NotificationManager {
-    constructor(extensionName, settings, basePath) {
+    constructor(extensionName, settings) {
         this._settings = settings;
-        this._basePath = basePath;
 
         this._notificationSource = new MessageTray.Source({
             title: extensionName,
@@ -31,7 +29,7 @@ export class NotificationManager {
                 source: this._notificationSource,
                 title,
                 body,
-                gicon: new Gio.FileIcon({ file: Gio.File.new_for_path(`${this._basePath}/assets/icons/${prayer.id}.svg`) }),
+                gicon: prayer.icon,
                 isTransient: true,
             }),
         );
