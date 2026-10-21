@@ -15,7 +15,7 @@ export class NotificationManager {
         Main.messageTray.add(this._notificationSource);
     }
 
-    notifyPrayer(prayer) {
+    notifyArrival(prayer) {
         this._triggerNotification(prayer, _("Time for %s").format(prayer.name), _("It is time to pray."));
     }
 

@@ -168,7 +168,7 @@ export default class PrayerTime extends Extension {
             if (this._lastArrivedPrayerTime === prayerTime) return;
             this._lastArrivedPrayerTime = prayerTime;
 
-            this._notifier.notifyPrayer(nextPrayer);
+            this._notifier.notifyArrival(nextPrayer);
             if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, text, null);
 
             // shift to tomorrow / next prayer
@@ -189,7 +189,7 @@ export default class PrayerTime extends Extension {
             const prayerTime = nextPrayer.time.to_unix_usec();
             if (this._lastReminderTime !== prayerTime) {
                 this._lastReminderTime = prayerTime;
-                this._notifier.notifyPrayer(nextPrayer);
+                this._notifier.notifyReminder(nextPrayer);
             }
             return;
         }
