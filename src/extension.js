@@ -6,10 +6,10 @@ import St from "gi://St";
 
 import { Extension, gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
 import { SettingManager } from "./setting-manager.js";
 import { Menu, Indicator } from "./ui.js";
+import { NotificationManager } from "./notification-manager.js";
 import { MawaqitClient } from "./mawaqit-client.js";
 import { GeoclueService } from "./geoclue-service.js";
 import { CalcPrayerTimes } from "./calc-prayer-times.js";
@@ -24,13 +24,13 @@ export default class PrayerTime extends Extension {
         this._indicator.setMenu(this._menu);
         Main.panel.addToStatusArea(this.uuid, this._indicator, this._settings.indicatorOrder, this._settings.indicatorAlignment);
 
+        this._notifier = new NotificationManager(this.metadata.name, this._settings, this.path, this._timeFormat);
+
         this._geoclueService = null;
         this._clockSignalId = null;
         this._soundFile = null;
         this._wakeProxy = null;
         this._wakeSignalId = null;
-        this._notificationSource = new MessageTray.Source({ title: this.metadata.name, iconName: "preferences-system-time-symbolic" });
-        Main.messageTray.add(this._notificationSource);
 
         this._wallClock = new GnomeDesktop.WallClock();
 
@@ -163,13 +163,12 @@ export default class PrayerTime extends Extension {
 
         if (isArrived) {
             // notify prayer arrival
-            const text = _("Time for %s").format(nextPrayer.name);
-            this._indicator.text = text;
+            this._indicator.text = _("Time for %s").format(nextPrayer.name);
             const prayerTime = nextPrayer.time.to_unix_usec();
             if (this._lastArrivedPrayerTime === prayerTime) return;
             this._lastArrivedPrayerTime = prayerTime;
 
-            if (this._settings.isNotify) this._notifyPrayer(nextPrayer, text, _("It is time to pray."));
+            this._notifier.notifyPrayer(nextPrayer);
             if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, text, null);
 
             // shift to tomorrow / next prayer
@@ -186,14 +185,11 @@ export default class PrayerTime extends Extension {
         // prayer reminder
         if (minutesLeft === this._settings.reminder) {
             // minutesLeft will always > 0, so this._settings.reminder > 0 && ... is redundant
-            const text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder);
-            this._indicator.text = text;
+            this._indicator.text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder);
             const prayerTime = nextPrayer.time.to_unix_usec();
-            if (this._settings.isNotify && this._lastReminderTime !== prayerTime) {
+            if (this._lastReminderTime !== prayerTime) {
                 this._lastReminderTime = prayerTime;
-                const notificationTitle = _("Upcoming prayer");
-                const notificationBody = _("%s is in %d minutes (%s).").format(nextPrayer.name, this._settings.reminder, nextPrayer.time.format(this._timeFormat));
-                this._notifyPrayer(nextPrayer, notificationTitle, notificationBody);
+                this._notifier.notifyPrayer(nextPrayer);
             }
             return;
         }
@@ -248,18 +244,6 @@ export default class PrayerTime extends Extension {
         }
     }
 
-    _notifyPrayer(prayer, title, body) {
-        const iconFile = Gio.File.new_for_path(`${this.path}/assets/icons/${prayer.id}.svg`);
-        const notification = new MessageTray.Notification({
-            source: this._notificationSource,
-            title,
-            body,
-            gicon: new Gio.FileIcon({ file: iconFile }),
-            isTransient: true,
-        });
-        this._notificationSource.addNotification(notification);
-    }
-
     _destroyMain() {
         this._indicator.text = "...";
         this._menu.destroy();
@@ -295,10 +279,7 @@ export default class PrayerTime extends Extension {
 
         this._destroyMain();
 
-        if (this._notificationSource) {
-            this._notificationSource.destroy();
-            this._notificationSource = null;
-        }
+        this._notifier.destroy();
 
         if (this._wallClock) this._wallClock = null;
 
