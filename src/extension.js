@@ -260,9 +260,6 @@ export default class PrayerTime extends Extension {
     }
 
     disable() {
-        this._panelBox?.disconnectObject(this);
-        this._panelBox = null;
-
         if (this._wakeProxy) {
             if (this._wakeSignalId) {
                 this._wakeProxy.disconnect(this._wakeSignalId);
