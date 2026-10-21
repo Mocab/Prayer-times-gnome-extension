@@ -82,31 +82,36 @@ class IndicatorClass extends PanelMenu.Button {
         super._init(0.5, extensionName, true);
         this._extensionPath = extensionPath;
         this._prayerId = null;
+        this._icon = null;
 
-        this._icon = new St.Icon({ icon_size: 16, style: "margin-right: 6px;", visible: false });
-        this._label = new St.Label({ text: "...", y_align: Clutter.ActorAlign.CENTER });
+        this._label = new St.Label({
+            text: "...",
+            y_align: Clutter.ActorAlign.CENTER,
+        });
 
-        const box = new St.BoxLayout({ style: "padding: 0px 12px;" });
-        box.add_child(this._icon);
-        box.add_child(this._label);
-        this.add_child(box);
-    }
-
-    // prayer id whose icon is shown beside the text, null to hide it
-    get icon() {
-        return this._prayerId;
+        this._box = new St.BoxLayout({
+            style: "padding: 0px 12px;",
+            spacing: 6,
+        });
+        this._box.add_child(this._label);
+        this.add_child(this._box);
     }
 
     set icon(prayerId) {
-        if (this._prayerId === prayerId) return;
         this._prayerId = prayerId;
 
-        this._icon.visible = !!prayerId;
-        if (prayerId) this._icon.gicon = Gio.icon_new_for_string(`${this._extensionPath}/assets/icons/${prayerId}.svg`);
-    }
-
-    get text() {
-        return this._label.text;
+        if (prayerId) {
+            // TODO: in the settings-manager refactor move to a changed::indicator-style signal and call this on class init if enabled
+            if (!this._icon) {
+                this._icon = new St.Icon({ icon_size: 16 });
+                this._box.insert_child_at_index(this._icon, 0);
+            }
+            this._icon.gicon = Gio.icon_new_for_string(`${this._extensionPath}/assets/icons/${prayerId}.svg`);
+        } else if (this._icon) {
+            this._box.remove_child(this._icon);
+            this._icon.destroy();
+            this._icon = null;
+        }
     }
 
     set text(value) {
