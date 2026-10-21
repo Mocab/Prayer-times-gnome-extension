@@ -92,20 +92,19 @@ class IndicatorClass extends PanelMenu.Button {
         });
 
         this._box = new St.BoxLayout({
-            style: "padding: 0px 12px;",
-            spacing: 6,
+            style: "padding: 0px 12px;"
         });
         this._box.add_child(this._label);
         this.add_child(this._box);
     }
 
     icon(prayerId) {
-        if (this._settings.indicatorStyle !== "text" && prayerId) {
+        if (this._settings.indicatorStyle !== "name" && prayerId) {
             if (this._prayerId === prayerId && this._icon) return;
             this._prayerId = prayerId;
             // TODO: in the settings-manager refactor move to a changed::indicator-style signal and call this on class init if enabled
             if (!this._icon) {
-                this._icon = new St.Icon({ icon_size: 16 });
+                this._icon = new St.Icon({ icon_size: 16 , style: "margin-right: 6px"});
                 this._box.insert_child_at_index(this._icon, 0);
             }
             this._icon.gicon = Gio.icon_new_for_string(`${this._basePath}/assets/icons/${prayerId}.svg`);
