@@ -8,9 +8,9 @@ import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 
 export class Menu extends PopupMenu.PopupMenu {
-    constructor(sourceActor, arrowAlignment, arrowSide, extensionPath, timeFormat) {
+    constructor(sourceActor, arrowAlignment, arrowSide, basePath, timeFormat) {
         super(sourceActor, arrowAlignment, arrowSide);
-        this.extensionPath = extensionPath;
+        this.basePath = basePath;
         this._currentActiveIndex = null;
         this._timeFormat = timeFormat;
     }
@@ -21,7 +21,7 @@ export class Menu extends PopupMenu.PopupMenu {
 
             menuItem.add_child(
                 new St.Icon({
-                    gicon: Gio.icon_new_for_string(`${this.extensionPath}/assets/icons/${prayer.id}.svg`),
+                    gicon: Gio.icon_new_for_string(`${this.basePath}/assets/icons/${prayer.id}.svg`),
                     icon_size: 20,
                 }),
             );
@@ -78,9 +78,9 @@ export class Menu extends PopupMenu.PopupMenu {
 }
 
 class IndicatorClass extends PanelMenu.Button {
-    _init(extensionName, extensionPath) {
+    _init(extensionName, basePath) {
         super._init(0.5, extensionName, true);
-        this._extensionPath = extensionPath;
+        this._basePath = basePath;
         this._prayerId = null;
         this._icon = null;
 
@@ -106,7 +106,7 @@ class IndicatorClass extends PanelMenu.Button {
                 this._icon = new St.Icon({ icon_size: 16 });
                 this._box.insert_child_at_index(this._icon, 0);
             }
-            this._icon.gicon = Gio.icon_new_for_string(`${this._extensionPath}/assets/icons/${prayerId}.svg`);
+            this._icon.gicon = Gio.icon_new_for_string(`${this._basePath}/assets/icons/${prayerId}.svg`);
         } else if (this._icon) {
             this._box.remove_child(this._icon);
             this._icon.destroy();
