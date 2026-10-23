@@ -169,7 +169,7 @@ export default class PrayerTime extends Extension {
             this._lastArrivedPrayerTime = prayerTime;
 
             this._notifier.notifyArrival(nextPrayer);
-            if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, _("Athan"), null);
+            if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, _("Call to prayer"), null);
 
             // shift to tomorrow / next prayer
             if (this._schedule.nextPrayerI === this._schedule.prayers.length - 1) {
