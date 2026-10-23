@@ -106,7 +106,8 @@ export default class PrayerTime extends Extension {
     _buildPrayerList(prayerTimes) {
         // TODO: update only time when moving to a new day instead of recreating the array
         const iconPath = this.path + "/assets/icons/";
-        const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null, icon: Gio.icon_new_for_string(iconPath + id + ".svg") });
+        const iconSuffix = this._settings.useSymbolicIcons ? "-symbolic.svg" : ".svg";
+        const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null, icon: Gio.icon_new_for_string(iconPath + id + iconSuffix) });
 
         const fajr = prayer("fajr", _("Fajr"));
         const dhuhr = prayer("dhuhr", prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"));

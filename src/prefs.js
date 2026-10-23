@@ -429,6 +429,13 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         group.add(indicatorOrderRow);
         gSettings.bind("indicator-order", indicatorOrderRow, "value", Gio.SettingsBindFlags.DEFAULT);
 
+        const useSymbolicIconsRow = new Adw.SwitchRow({
+            title: _("Use symbolic icons"),
+            subtitle: _("Use symbolic icons for prayer indicators."),
+        });
+        group.add(useSymbolicIconsRow);
+        gSettings.bind("use-symbolic-icons", useSymbolicIconsRow, "active", Gio.SettingsBindFlags.DEFAULT);
+
         return group;
     }
     #notificationGroup(gSettings) {

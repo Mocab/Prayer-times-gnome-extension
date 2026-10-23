@@ -62,6 +62,7 @@ class SettingManagerClass extends GObject.Object {
             { key: "display-mode", prop: "displayMode", type: "string" },
             { key: "reminder", prop: "reminder", type: "int" },
             { key: "sound-player", prop: "isSound", type: "boolean" },
+            { key: "use-symbolic-icons", prop: "useSymbolicIcons", type: "boolean" },
         ];
 
         for (const { key, prop, type } of reloadMainSettings) {

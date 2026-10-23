@@ -130,6 +130,11 @@
                 <range min="0" max="10"/>
                 <description>Order within the panel section (0 = leftmost, 10 = rightmost)</description>
             </key>
+            <key name="use-symbolic-icons" type="b">
+                <summary>Use symbolic icons</summary>
+                <default>false</default>
+                <description>Use symbolic icons for prayer indicators</description>
+            </key>
 
             <key name="notify-prayer" type="b">
                 <summary>Send notifications</summary>

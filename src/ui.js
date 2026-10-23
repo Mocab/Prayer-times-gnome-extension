@@ -84,13 +84,13 @@ class IndicatorClass extends PanelMenu.Button {
 
     icon(prayer) {
         if (this._settings.indicatorStyle !== "name" && prayer.id) {
-            if (this._prayerId === prayer.id && this._icon) return;
             this._prayerId = prayer.id;
             // TODO: in the settings-manager refactor move to a changed::indicator-style signal and call this on class init if enabled
             if (!this._icon) {
                 this._icon = new St.Icon({ icon_size: 16, style: "margin-right: 6px" });
                 this._box.insert_child_at_index(this._icon, 0);
             }
+            // Always update gicon in case it changed
             this._icon.gicon = prayer.icon;
         } else if (this._icon) {
             this._prayerId = null;
