@@ -104,7 +104,38 @@
                 </choices>
                 <description>Display next prayer as a countdown or fixed time</description>
             </key>
-            
+            <key name="indicator-style" type="s">
+                <summary>Indicator style</summary>
+                <default>'name'</default>
+                <choices>
+                    <choice value='name'/>
+                    <choice value='icon'/>
+                    <choice value='both'/>
+                </choices>
+                <description>How the next prayer is displayed in the indicator</description>
+            </key>
+            <key name="indicator-alignment" type="s">
+                <summary>Indicator alignment</summary>
+                <default>'center'</default>
+                <choices>
+                    <choice value='left'/>
+                    <choice value='center'/>
+                    <choice value='right'/>
+                </choices>
+                <description>Which panel section the indicator is placed in</description>
+            </key>
+            <key name="indicator-order" type="i">
+                <summary>Indicator order</summary>
+                <default>1</default>
+                <range min="0" max="10"/>
+                <description>Order within the panel section (0 = leftmost, 10 = rightmost)</description>
+            </key>
+            <key name="use-symbolic-icons" type="b">
+                <summary>Use symbolic icons</summary>
+                <default>false</default>
+                <description>Use symbolic icons for prayer indicators</description>
+            </key>
+
             <key name="notify-prayer" type="b">
                 <summary>Send notifications</summary>
                 <default>true</default>

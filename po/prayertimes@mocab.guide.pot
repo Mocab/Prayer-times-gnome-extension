@@ -1,8 +1,6 @@
-# Language translation template file
-# To submit a translation, copy this file and rename it to <language code>.po , example: ar.po for arabic. After filling up everything create a PR
-
-# <language> translation for Prayer Times Extension.
-# This file is distributed under the same license as the Prayer Times Extension.
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
@@ -10,124 +8,127 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-28 22:13+0100\n"
+"POT-Creation-Date: 2026-10-22 12:37+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: \n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/extension.js:19
+#: src/extension.js:20
 msgid "%-I:%M %p"
 msgstr ""
 
-#: src/extension.js:19
+#: src/extension.js:20
 msgid "%R"
 msgstr ""
 
-#: src/extension.js:49
+#: src/extension.js:54
 #, javascript-format
 msgid ""
 "Failed to detect system sleep. Prayer times won't update automatically when "
 "your computer wakes up: %s"
 msgstr ""
 
-#: src/extension.js:102
+#: src/extension.js:111
 msgid "Fajr"
 msgstr ""
 
-#: src/extension.js:105
+#: src/extension.js:112
 msgid "Jumaah"
 msgstr ""
 
-#: src/extension.js:105
+#: src/extension.js:112
 msgid "Dhuhr"
 msgstr ""
 
-#: src/extension.js:108
+#: src/extension.js:113
 msgid "Asr"
 msgstr ""
 
-#: src/extension.js:109
+#: src/extension.js:114
 msgid "Maghrib"
 msgstr ""
 
-#: src/extension.js:110
+#: src/extension.js:115
 msgid "Isha"
 msgstr ""
 
-#: src/extension.js:113
+#: src/extension.js:118
 msgid "Duha"
 msgstr ""
 
-#: src/extension.js:129
+#: src/extension.js:135
 #, javascript-format
 msgid ""
 "Failed to connect to Mawaqit. Defaulting to automatic location detection: %s"
 msgstr ""
 
-#: src/extension.js:129
+#: src/extension.js:135
 #, javascript-format
 msgid "Failed to connect to Mawaqit. Defaulting to manual location: %s"
 msgstr ""
 
-#: src/extension.js:143
+#: src/extension.js:149
 #, javascript-format
 msgid ""
 "Failed to find location automatically. Defaulting to manual calculations: %s"
 msgstr ""
 
-#: src/extension.js:158
-#, javascript-format
-msgid "Time for %s"
+#: src/extension.js:172
+msgid "Call to prayer"
 msgstr ""
 
-#: src/extension.js:177
-#, javascript-format
-msgid "%s in %d minutes"
-msgstr ""
-
-#: src/extension.js:186
-#, javascript-format
-msgid "%s in %s"
-msgstr ""
-
-#: src/extension.js:186
-#, javascript-format
-msgid "%s: %s"
-msgstr ""
-
-#: src/mawaqit-client.js:46
+#: src/mawaqit-client.js:49
 #, javascript-format
 msgid "MawaqitClient: Failed to write cache file: %s"
 msgstr ""
 
-#: src/mawaqit-client.js:54
+#: src/mawaqit-client.js:57
 #, javascript-format
 msgid "MawaqitClient: Failed to update the Mawaqit prayers cache: %s"
 msgstr ""
 
-#: src/mawaqit-client.js:63
+#: src/mawaqit-client.js:66
 msgid "Unexpected prayer data structure or array length"
 msgstr ""
 
-#: src/mawaqit-client.js:81
+#: src/mawaqit-client.js:84
 msgid "Invalid Mawaqit mosque URL slug."
 msgstr ""
 
-#: src/mawaqit-client.js:84
+#: src/mawaqit-client.js:87
 #, javascript-format
 msgid "Network error: HTTP %s"
 msgstr ""
 
-#: src/mawaqit-client.js:89
+#: src/mawaqit-client.js:92
 msgid "Failed to parse prayer schedule from Mawaqit."
 msgstr ""
 
-#: src/mawaqit-client.js:91
+#: src/mawaqit-client.js:94
 msgid "Expected calendar to be 12 months long."
+msgstr ""
+
+#: src/notification-manager.js:17 src/ui.js:108
+#, javascript-format
+msgid "Time for %s"
+msgstr ""
+
+#: src/notification-manager.js:17
+msgid "It is time to pray."
+msgstr ""
+
+#: src/notification-manager.js:21
+#, javascript-format
+msgid "%s Reminder"
+msgstr ""
+
+#: src/notification-manager.js:21
+#, javascript-format
+msgid "Begins in %d minutes."
 msgstr ""
 
 #: src/prefs.js:14
@@ -346,38 +347,92 @@ msgstr ""
 msgid "Show next prayer countdown or time in the status area."
 msgstr ""
 
-#: src/prefs.js:403
-msgid "Notifications"
+#: src/prefs.js:400
+msgid "Name"
 msgstr ""
 
-#: src/prefs.js:407
-msgid "Send notifications"
+#: src/prefs.js:401
+msgid "Icon"
+msgstr ""
+
+#: src/prefs.js:402
+msgid "Icon & name"
+msgstr ""
+
+#: src/prefs.js:405
+msgid "Indicator style"
+msgstr ""
+
+#: src/prefs.js:406
+msgid "How the next prayer is displayed in the indicator."
 msgstr ""
 
 #: src/prefs.js:413
+msgid "Left"
+msgstr ""
+
+#: src/prefs.js:414
+msgid "Center"
+msgstr ""
+
+#: src/prefs.js:415
+msgid "Right"
+msgstr ""
+
+#: src/prefs.js:418
+msgid "Indicator alignment"
+msgstr ""
+
+#: src/prefs.js:425
+msgid "Indicator order"
+msgstr ""
+
+#: src/prefs.js:426
+msgid "Order within the panel section (0 = leftmost, 10 = rightmost)."
+msgstr ""
+
+#: src/prefs.js:436
+msgid "Notifications"
+msgstr ""
+
+#: src/prefs.js:440
+msgid "Send notifications"
+msgstr ""
+
+#: src/prefs.js:446
 msgid "Play takbir for prayers"
 msgstr ""
 
-#: src/prefs.js:419
+#: src/prefs.js:452
 msgid "Number of minutes to notify before prayer"
 msgstr ""
 
-#: src/setting-manager.js:26
+#: src/setting-manager.js:27
 #, javascript-format
 msgid "%s Updated"
 msgstr ""
 
-#: src/setting-manager.js:27
+#: src/setting-manager.js:28
 #, javascript-format
 msgid ""
 "Extension has been updated to v%d. Please review any potential breaking "
 "changes."
 msgstr ""
 
-#: src/setting-manager.js:31
+#: src/setting-manager.js:32
 msgid "Review Changes"
 msgstr ""
 
-#: src/setting-manager.js:35
+#: src/setting-manager.js:36
 msgid "Dismiss"
+msgstr ""
+
+#: src/ui.js:112
+#, javascript-format
+msgid "%s in %d minutes"
+msgstr ""
+
+#: src/ui.js:117
+#, javascript-format
+msgid "%s %s"
 msgstr ""

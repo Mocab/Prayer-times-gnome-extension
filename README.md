@@ -31,7 +31,6 @@ Highly customizable and efficient prayer time and athan reminder extension for G
 
 ### :hammer: TODO:
 
-- Add icons to notifications
 - Add support for custom times (jamaaha) (manual preset and potentially json)
 - Add current hijri date
 - Add option to force language to Arabic

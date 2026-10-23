@@ -396,6 +396,46 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         group.add(displayModeRow);
         this.#bindMapping(gSettings, "display-mode", displayModeRow, displayModes);
 
+        const indicatorStyles = [
+            { id: "name", name: _("Name") },
+            { id: "icon", name: _("Icon") },
+            { id: "both", name: _("Icon & name") },
+        ];
+        const indicatorStyleRow = new Adw.ComboRow({
+            title: _("Indicator style"),
+            subtitle: _("How the next prayer is displayed in the indicator."),
+            model: new Gtk.StringList({ strings: indicatorStyles.map((mode) => mode.name) }),
+        });
+        group.add(indicatorStyleRow);
+        this.#bindMapping(gSettings, "indicator-style", indicatorStyleRow, indicatorStyles);
+
+        const indicatorAlignments = [
+            { id: "left", name: _("Left") },
+            { id: "center", name: _("Center") },
+            { id: "right", name: _("Right") },
+        ];
+        const indicatorAlignmentRow = new Adw.ComboRow({
+            title: _("Indicator alignment"),
+            model: new Gtk.StringList({ strings: indicatorAlignments.map((p) => p.name) }),
+        });
+        group.add(indicatorAlignmentRow);
+        this.#bindMapping(gSettings, "indicator-alignment", indicatorAlignmentRow, indicatorAlignments);
+
+        const indicatorOrderRow = new Adw.SpinRow({
+            title: _("Indicator order"),
+            subtitle: _("Order within the panel section (0 = leftmost, 10 = rightmost)."),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 10, step_increment: 1 }),
+        });
+        group.add(indicatorOrderRow);
+        gSettings.bind("indicator-order", indicatorOrderRow, "value", Gio.SettingsBindFlags.DEFAULT);
+
+        const useSymbolicIconsRow = new Adw.SwitchRow({
+            title: _("Use symbolic icons"),
+            subtitle: _("Use symbolic icons for prayer indicators."),
+        });
+        group.add(useSymbolicIconsRow);
+        gSettings.bind("use-symbolic-icons", useSymbolicIconsRow, "active", Gio.SettingsBindFlags.DEFAULT);
+
         return group;
     }
     #notificationGroup(gSettings) {

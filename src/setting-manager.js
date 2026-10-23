@@ -9,12 +9,13 @@ import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 
 class SettingManagerClass extends GObject.Object {
-    _init(gSettings, metadata, reloadMain) {
+    _init(gSettings, metadata, reloadMain, updateIndicatorPosition) {
         super._init();
         this._gSettings = gSettings;
         this._gSettingListener = {};
         this._desktopSettings = Gio.Settings.new("org.gnome.desktop.interface");
         this._reloadExtensionMain = reloadMain;
+        this._updateIndicatorPosition = updateIndicatorPosition;
 
         const versionCache = this._gSettings.get_int("version-cache");
         if (versionCache < metadata.version) {
@@ -61,6 +62,7 @@ class SettingManagerClass extends GObject.Object {
             { key: "display-mode", prop: "displayMode", type: "string" },
             { key: "reminder", prop: "reminder", type: "int" },
             { key: "sound-player", prop: "isSound", type: "boolean" },
+            { key: "use-symbolic-icons", prop: "useSymbolicIcons", type: "boolean" },
         ];
 
         for (const { key, prop, type } of reloadMainSettings) {
@@ -77,6 +79,20 @@ class SettingManagerClass extends GObject.Object {
             this.clockFormat = gSettings.get_string(key);
             this._reloadExtensionMain();
         });
+
+        const updateIndicatorPositionSettings = [
+            { key: "indicator-style", prop: "indicatorStyle", type: "string" },
+            { key: "indicator-alignment", prop: "indicatorAlignment", type: "string" },
+            { key: "indicator-order", prop: "indicatorOrder", type: "int" },
+        ];
+        for (const { key, prop, type } of updateIndicatorPositionSettings) {
+            const getter = `get_${type}`;
+            this[prop] = this._gSettings[getter](key);
+            this._gSettingListener[prop] = this._gSettings.connect(`changed::${key}`, (gSettings) => {
+                this[prop] = gSettings[getter](key);
+                this._updateIndicatorPosition();
+            });
+        }
 
         this.isNotify = this._gSettings.get_boolean("notify-prayer");
         this._gSettingListener.isNotifyListener = this._gSettings.connect("changed::notify-prayer", (gSettings, key) => {

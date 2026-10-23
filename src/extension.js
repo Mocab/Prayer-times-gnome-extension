@@ -9,19 +9,22 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 import { SettingManager } from "./setting-manager.js";
 import { Menu, Indicator } from "./ui.js";
+import { NotificationManager } from "./notification-manager.js";
 import { MawaqitClient } from "./mawaqit-client.js";
 import { GeoclueService } from "./geoclue-service.js";
 import { CalcPrayerTimes } from "./calc-prayer-times.js";
 
 export default class PrayerTime extends Extension {
     enable() {
-        this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this));
+        this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this), this.updateIndicatorPosition.bind(this));
         this._timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
 
-        this._indicator = new Indicator(this.metadata.name);
-        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._timeFormat);
+        this._indicator = new Indicator(this.metadata.name, this._settings, this._timeFormat);
+        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this._timeFormat);
         this._indicator.setMenu(this._menu);
-        Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
+        Main.panel.addToStatusArea(this.uuid, this._indicator, this._settings.indicatorOrder, this._settings.indicatorAlignment);
+
+        this._notifier = new NotificationManager(this.metadata.name, this._settings);
 
         this._geoclueService = null;
         this._clockSignalId = null;
@@ -36,6 +39,8 @@ export default class PrayerTime extends Extension {
             prayers: null,
             nextPrayerI: null,
         };
+        this._lastReminderTime = null;
+        this._lastArrivedPrayerTime = null;
         this._init().catch((e) => console.error(`[${this.metadata.name}]: Init error:`, e));
 
         // update extension on system wake
@@ -99,18 +104,20 @@ export default class PrayerTime extends Extension {
     }
 
     _buildPrayerList(prayerTimes) {
-        const fajr = { id: "fajr", name: _("Fajr"), time: prayerTimes.fajr ?? null };
-        const dhuhr = {
-            id: "dhuhr",
-            name: prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"),
-            time: prayerTimes.dhuhr ?? null,
-        };
-        const asr = { id: "asr", name: _("Asr"), time: prayerTimes.asr ?? null };
-        const maghrib = { id: "maghrib", name: _("Maghrib"), time: prayerTimes.maghrib ?? null };
-        const isha = { id: "isha", name: _("Isha"), time: prayerTimes.isha ?? null };
+        // TODO: update only time when moving to a new day instead of recreating the array
+        const iconPath = this.path + "/assets/icons/";
+        const iconSuffix = this._settings.useSymbolicIcons ? "-symbolic.svg" : ".svg";
+        const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null, icon: Gio.icon_new_for_string(iconPath + id + iconSuffix) });
 
-        if (!this._settings.isIncludeSunnah) return [fajr, dhuhr, asr, maghrib, isha];
-        return [fajr, { id: "duha", name: _("Duha"), time: prayerTimes.duha ?? null }, dhuhr, asr, maghrib, isha];
+        const fajr = prayer("fajr", _("Fajr"));
+        const dhuhr = prayer("dhuhr", prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"));
+        const asr = prayer("asr", _("Asr"));
+        const maghrib = prayer("maghrib", _("Maghrib"));
+        const isha = prayer("isha", _("Isha"));
+
+        return this._settings.isIncludeSunnah //
+            ? [fajr, prayer("duha", _("Duha")), dhuhr, asr, maghrib, isha]
+            : [fajr, dhuhr, asr, maghrib, isha];
     }
 
     async _getPrayerTimes(dateTime, cache = { mawaqitClient: null }) {
@@ -152,13 +159,18 @@ export default class PrayerTime extends Extension {
         const nextPrayer = this._schedule.prayers[this._schedule.nextPrayerI];
         const diffUsec = nextPrayer.time.to_unix_usec() - GLib.get_real_time();
 
-        // three second buffer
-        if (diffUsec <= 3e6) {
+        const isArrived = diffUsec <= 3e6; // three second buffer
+        // TODO: optimise so it doesn't run every tick
+        this._indicator.icon(nextPrayer);
+        if (isArrived) {
             // notify prayer arrival
-            const text = _("Time for %s").format(nextPrayer.name);
-            this._indicator.text = text;
-            if (this._settings.isNotify) Main.notify(this.metadata.name, text);
-            if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, text, null);
+            this._indicator.setArrival(nextPrayer.name);
+            const prayerTime = nextPrayer.time.to_unix_usec();
+            if (this._lastArrivedPrayerTime === prayerTime) return;
+            this._lastArrivedPrayerTime = prayerTime;
+
+            this._notifier.notifyArrival(nextPrayer);
+            if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, _("Call to prayer"), null);
 
             // shift to tomorrow / next prayer
             if (this._schedule.nextPrayerI === this._schedule.prayers.length - 1) {
@@ -174,16 +186,16 @@ export default class PrayerTime extends Extension {
         // prayer reminder
         if (minutesLeft === this._settings.reminder) {
             // minutesLeft will always > 0, so this._settings.reminder > 0 && ... is redundant
-            const text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder);
-            this._indicator.text = text;
-            if (this._settings.isNotify) Main.notify(this.metadata.name, text);
+            this._indicator.setReminder(nextPrayer.name, this._settings.reminder);
+            const prayerTime = nextPrayer.time.to_unix_usec();
+            if (this._lastReminderTime !== prayerTime) {
+                this._lastReminderTime = prayerTime;
+                this._notifier.notifyReminder(nextPrayer);
+            }
             return;
         }
 
-        this._indicator.text =
-            this._settings.displayMode === "countdown" //
-                ? _("%s in %s").format(nextPrayer.name, `${String((minutesLeft / 60) | 0).padStart(2, "0")}:${String(minutesLeft % 60).padStart(2, "0")}`)
-                : _("%s: %s").format(nextPrayer.name, nextPrayer.time.format(this._timeFormat));
+        this._indicator.setUpcoming(nextPrayer, minutesLeft);
     }
     async _advanceToNextDay() {
         this._schedule = {
@@ -192,6 +204,24 @@ export default class PrayerTime extends Extension {
         };
         this._menu.update(this._schedule);
         this._tick();
+    }
+
+    updateIndicatorPosition() {
+        const container = this._indicator.container;
+
+        const targetBox = Main.panel[`_${this._settings.indicatorAlignment}Box`];
+        if (!targetBox) return;
+
+        const currentBox = container.get_parent();
+
+        if (currentBox === targetBox) {
+            targetBox.set_child_at_index(container, this._settings.indicatorOrder);
+        } else {
+            currentBox?.remove_child(container);
+            targetBox.insert_child_at_index(container, this._settings.indicatorOrder);
+        }
+
+        if (this._clockSignalId) this._tick(); // once the schedule is loaded
     }
 
     async refreshSchedule() {
@@ -241,6 +271,8 @@ export default class PrayerTime extends Extension {
         }
 
         this._destroyMain();
+
+        this._notifier.destroy();
 
         if (this._wallClock) this._wallClock = null;
 
