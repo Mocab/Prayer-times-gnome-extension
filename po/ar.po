@@ -445,27 +445,3 @@ msgstr "%s خلال %d دقيقة"
 #, javascript-format
 msgid "%s %s"
 msgstr "%s %s"
-
-#~ msgid "Upcoming prayer"
-#~ msgstr "الصلاة القادمة"
-
-#, javascript-format
-#~ msgid "%s is in %d minutes (%s)."
-#~ msgstr "صلاة %s بعد %d دقيقة (%s)."
-
-#, javascript-format
-#~ msgid "%s in %s"
-#~ msgstr "%s بعد %s"
-
-#, javascript-format
-#~ msgid "%s: %s"
-#~ msgstr "%s: %s"
-
-#~ msgid "Compact"
-#~ msgstr "مضغوط"
-
-#~ msgid "Normal"
-#~ msgstr "عادي"
-
-#~ msgid "Normal + icon"
-#~ msgstr "عادي + أيقونة"
