@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 17\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-28 22:00+0100\n"
-"PO-Revision-Date: 2026-07-31 12:00+0100\n"
+"POT-Creation-Date: 2026-10-22 12:00+0100\n"
+"PO-Revision-Date: 2026-10-22 12:00+0100\n"
 "Last-Translator: mocab\n"
 "Language-Team: \n"
 "Language: ar\n"
@@ -16,131 +16,121 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: src/extension.js:19
+#: src/extension.js:20
 msgid "%-I:%M %p"
 msgstr "%-I:%M %p"
 
-#: src/extension.js:19
+#: src/extension.js:20
 msgid "%R"
 msgstr "%R"
 
-#: src/extension.js:49
+#: src/extension.js:54
 #, javascript-format
 msgid ""
 "Failed to detect system sleep. Prayer times won't update automatically when "
 "your computer wakes up: %s"
 msgstr ""
-"فشل رصد وضع سكون النظام. لن تُحدّث مواقيت الصلاة تلقائيًا عند "
-"استيقاظ الحاسوب: %s"
+"فشل رصد وضع سكون النظام. لن تُحدّث مواقيت الصلاة تلقائيًا عند استيقاظ الحاسوب: "
+"%s"
 
-#: src/extension.js:102
+#: src/extension.js:111
 msgid "Fajr"
 msgstr "الفجر"
 
-#: src/extension.js:105
+#: src/extension.js:112
 msgid "Jumaah"
 msgstr "الجمعة"
 
-#: src/extension.js:105
+#: src/extension.js:112
 msgid "Dhuhr"
 msgstr "الظهر"
 
-#: src/extension.js:108
+#: src/extension.js:113
 msgid "Asr"
 msgstr "العصر"
 
-#: src/extension.js:109
+#: src/extension.js:114
 msgid "Maghrib"
 msgstr "المغرب"
 
-#: src/extension.js:110
+#: src/extension.js:115
 msgid "Isha"
 msgstr "العشاء"
 
-#: src/extension.js:113
+#: src/extension.js:118
 msgid "Duha"
 msgstr "الضحى"
 
-#: src/extension.js:129
+#: src/extension.js:135
 #, javascript-format
 msgid ""
 "Failed to connect to Mawaqit. Defaulting to automatic location detection: %s"
 msgstr "فشل الاتصال بمواقيت. سيتم الانتقال إلى تحديد الموقع تلقائيًا: %s"
 
-#: src/extension.js:129
+#: src/extension.js:135
 #, javascript-format
 msgid "Failed to connect to Mawaqit. Defaulting to manual location: %s"
 msgstr "فشل الاتصال بمواقيت. سيتم الاعتماد على إدخال الموقع يدويًا: %s"
 
-#: src/extension.js:143
+#: src/extension.js:149
 #, javascript-format
 msgid ""
 "Failed to find location automatically. Defaulting to manual calculations: %s"
 msgstr "فشل تحديد الموقع تلقائيًا. سيتم الاعتماد على الحسابات اليدوية: %s"
 
-#: src/extension.js:180
-#, javascript-format
-msgid "Time for %s"
-msgstr "حان وقت %s"
+#: src/extension.js:172
+msgid "Call to prayer"
+msgstr "الأذان"
 
-#: src/extension.js:186
-msgid "It is time to pray."
-msgstr "حان وقت الصلاة."
-
-#: src/extension.js:203
-#, javascript-format
-msgid "%s in %d minutes"
-msgstr "%s خلال %d دقيقة"
-
-#: src/extension.js:208
-msgid "Upcoming prayer"
-msgstr "الصلاة القادمة"
-
-#: src/extension.js:209
-#, javascript-format
-msgid "%s is in %d minutes (%s)."
-msgstr "صلاة %s بعد %d دقيقة (%s)."
-
-#: src/extension.js:186
-#, javascript-format
-msgid "%s in %s"
-msgstr "%s بعد %s"
-
-#: src/extension.js:186
-#, javascript-format
-msgid "%s: %s"
-msgstr "%s: %s"
-
-#: src/mawaqit-client.js:46
+#: src/mawaqit-client.js:49
 #, javascript-format
 msgid "MawaqitClient: Failed to write cache file: %s"
 msgstr "MawaqitClient: فشل إنشاء ملف الذاكرة المؤقت: %s"
 
-#: src/mawaqit-client.js:54
+#: src/mawaqit-client.js:57
 #, javascript-format
 msgid "MawaqitClient: Failed to update the Mawaqit prayers cache: %s"
 msgstr "MawaqitClient: فشل تحديث الذاكرة المؤقت لمواقيت الصلاة: %s"
 
-#: src/mawaqit-client.js:63
+#: src/mawaqit-client.js:66
 msgid "Unexpected prayer data structure or array length"
 msgstr "بنية غير متوقعة لبيانات الصلاة أو طول المصفوفة"
 
-#: src/mawaqit-client.js:81
+#: src/mawaqit-client.js:84
 msgid "Invalid Mawaqit mosque URL slug."
 msgstr "المُعرِّف الفريد لرابط المسجد في مواقيت غير صحيح."
 
-#: src/mawaqit-client.js:84
+#: src/mawaqit-client.js:87
 #, javascript-format
 msgid "Network error: HTTP %s"
 msgstr "خطأ في الشبكة: HTTP %s"
 
-#: src/mawaqit-client.js:89
+#: src/mawaqit-client.js:92
 msgid "Failed to parse prayer schedule from Mawaqit."
 msgstr "فشل تحليل جدول الصلاة من مواقيت."
 
-#: src/mawaqit-client.js:91
+#: src/mawaqit-client.js:94
 msgid "Expected calendar to be 12 months long."
 msgstr "يُفترض أن يحتوي التقويم على 12 شهرًا."
+
+#: src/notification-manager.js:17 src/ui.js:108
+#, javascript-format
+msgid "Time for %s"
+msgstr "حان وقت %s"
+
+#: src/notification-manager.js:17
+msgid "It is time to pray."
+msgstr "حان وقت الصلاة."
+
+#: src/notification-manager.js:21
+#, javascript-format
+msgid "%s Reminder"
+msgstr "تذكير %s"
+
+#: src/notification-manager.js:21
+#, fuzzy, javascript-format
+msgid "Begins in %d minutes."
+msgstr "%s خلال %d دقيقة"
 
 #: src/prefs.js:14
 msgid "Calculations"
@@ -183,7 +173,8 @@ msgid ""
 "Used when \"manual location\" is selected or if Mawaqit and/or auto location "
 "fails."
 msgstr ""
-"يُستخدم عند اختيار \"إدخال الموقع يدويًا\" أو في حال فشل مواقيت و/أو تحديد الموقع تلقائيًا."
+"يُستخدم عند اختيار \"إدخال الموقع يدويًا\" أو في حال فشل مواقيت و/أو تحديد "
+"الموقع تلقائيًا."
 
 #: src/prefs.js:84
 msgid "Latitude"
@@ -338,8 +329,8 @@ msgid ""
 "If Mawaqit fails, fall back to automatic location. Will always fall back to "
 "manual location if automatic location is disabled or unavailable."
 msgstr ""
-"إذا فشل مواقيت، فسيتم الاعتماد على تحديد الموقع تلقائيًا. وسيتم الرجوع دائمًا إلى "
-"إدخال الموقع يدويًا إذا كان التحديد التلقائي معطّلًا أو غير متاح."
+"إذا فشل مواقيت، فسيتم الاعتماد على تحديد الموقع تلقائيًا. وسيتم الرجوع دائمًا "
+"إلى إدخال الموقع يدويًا إذا كان التحديد التلقائي معطّلًا أو غير متاح."
 
 #: src/prefs.js:384
 msgid "Display"
@@ -361,59 +352,120 @@ msgstr "وضع العرض"
 msgid "Show next prayer countdown or time in the status area."
 msgstr "إظهار العد التنازلي أو وقت الصلاة القادمة في منطقة الحالة."
 
-#: src/prefs.js:399
-msgid "Compact"
-msgstr "مضغوط"
-
 #: src/prefs.js:400
-msgid "Normal"
-msgstr "عادي"
+msgid "Name"
+msgstr "الاسم"
 
 #: src/prefs.js:401
-msgid "Normal + icon"
-msgstr "عادي + أيقونة"
+msgid "Icon"
+msgstr "الأيقونة"
 
-#: src/prefs.js:404
-msgid "Indicator layout"
-msgstr "نمط العرض في الشريط"
+#: src/prefs.js:402
+msgid "Icon & name"
+msgstr "الأيقونة والاسم"
 
 #: src/prefs.js:405
-msgid "Choose how the next prayer appears in the top bar."
+#, fuzzy
+msgid "Indicator style"
+msgstr "نمط العرض في الشريط"
+
+#: src/prefs.js:406
+#, fuzzy
+msgid "How the next prayer is displayed in the indicator."
 msgstr "اختر طريقة عرض الصلاة القادمة في الشريط العلوي."
 
-#: src/prefs.js:403
+#: src/prefs.js:413
+msgid "Left"
+msgstr "يسار"
+
+#: src/prefs.js:414
+msgid "Center"
+msgstr "وسط"
+
+#: src/prefs.js:415
+msgid "Right"
+msgstr "يمين"
+
+#: src/prefs.js:418
+#, fuzzy
+msgid "Indicator alignment"
+msgstr "نمط العرض في الشريط"
+
+#: src/prefs.js:425
+#, fuzzy
+msgid "Indicator order"
+msgstr "نمط العرض في الشريط"
+
+#: src/prefs.js:426
+msgid "Order within the panel section (0 = leftmost, 10 = rightmost)."
+msgstr "الترتيب داخل قسم اللوحة (0 = أقصى اليسار، 10 = أقصى اليمين)."
+
+#: src/prefs.js:436
 msgid "Notifications"
 msgstr "الإشعارات"
 
-#: src/prefs.js:407
+#: src/prefs.js:440
 msgid "Send notifications"
 msgstr "إرسال الإشعارات"
 
-#: src/prefs.js:413
+#: src/prefs.js:446
 msgid "Play takbir for prayers"
 msgstr "تشغيل التكبير عند دخول وقت الصلاة"
 
-#: src/prefs.js:419
+#: src/prefs.js:452
 msgid "Number of minutes to notify before prayer"
 msgstr "عدد الدقائق للتنبيه قبل الصلاة"
 
-#: src/setting-manager.js:26
+#: src/setting-manager.js:27
 #, javascript-format
 msgid "%s Updated"
 msgstr "تم تحديث %s"
 
-#: src/setting-manager.js:27
+#: src/setting-manager.js:28
 #, javascript-format
 msgid ""
 "Extension has been updated to v%d. Please review any potential breaking "
 "changes."
-msgstr ""
-"تم تحديث الإضافة إلى الإصدار v%d. يُرجى مراجعة أي تغييرات جذرية محتملة."
+msgstr "تم تحديث الإضافة إلى الإصدار v%d. يُرجى مراجعة أي تغييرات جذرية محتملة."
 
-#: src/setting-manager.js:31
+#: src/setting-manager.js:32
 msgid "Review Changes"
 msgstr "مراجعة التغييرات"
 
-#: src/setting-manager.js:35
+#: src/setting-manager.js:36
 msgid "Dismiss"
 msgstr "إغلاق"
+
+#: src/ui.js:112
+#, javascript-format
+msgid "%s in %d minutes"
+msgstr "%s خلال %d دقيقة"
+
+#: src/ui.js:117
+#, javascript-format
+msgid "%s %s"
+msgstr "%s %s"
+
+#~ msgid "Upcoming prayer"
+#~ msgstr "الصلاة القادمة"
+
+#, javascript-format
+#~ msgid "%s is in %d minutes (%s)."
+#~ msgstr "صلاة %s بعد %d دقيقة (%s)."
+
+#, javascript-format
+#~ msgid "%s in %s"
+#~ msgstr "%s بعد %s"
+
+#, javascript-format
+#~ msgid "%s: %s"
+#~ msgstr "%s: %s"
+
+#~ msgid "Compact"
+#~ msgstr "مضغوط"
+
+#~ msgid "Normal"
+#~ msgstr "عادي"
+
+#~ msgid "Normal + icon"
+#~ msgstr "عادي + أيقونة"
