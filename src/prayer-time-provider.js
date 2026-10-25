@@ -80,12 +80,16 @@ export class PrayerTimeProvider {
             }
         }
 
+        let location = this.#settings.location;
+
         // try to get location automatically if selected as a source or Mawaqit failed
         if (this.#source === "auto") {
             try {
-                if (!this.geoclueService) this.geoclueService = new GeoclueService(this.metadata.name, this.#refreshSchedule);
-                await this.geoclueService.start();
-                return new CalcPrayerTimes(ymd, GLib.TimeZone.new_local(), this.geoclueService.currentLocation, this.#settings.calcMethod, this.#settings.asrMethod, this.#settings.highLatAdjustment);
+                this.#geoclueService ??= await GeoclueService.create(this.#extensionName, this.#refreshSchedule);
+
+                const geoclueLocation = this.#geoclueService.location;
+                if (geoclueLocation.latitude == null || geoclueLocation.longitude == null) throw new Error(_("Geoclue returned no coordinates"));
+                location = geoclueLocation;
             } catch (e) {
                 this.#geoclueService?.destroy(); // destroy if initialised before then failed on current run
                 this.#geoclueService = null;
@@ -95,7 +99,7 @@ export class PrayerTimeProvider {
         }
 
         // calculate locally
-        return new CalcPrayerTimes(ymd, cache.timeZone, this.#settings.location, this.#settings.calcMethod, this.#settings.asrMethod, this.#settings.highLatAdjustment);
+        return new CalcPrayerTimes(ymd, cache.timeZone, location, this.#settings.calcMethod, this.#settings.asrMethod, this.#settings.highLatAdjustment);
     }
 
     #buildPrayerList(prayerTimes) {
