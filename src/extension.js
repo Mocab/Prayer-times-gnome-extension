@@ -10,7 +10,7 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { SettingManager } from "./setting-manager.js";
 import { Menu, Indicator } from "./ui.js";
 import { MawaqitClient } from "./mawaqit-client.js";
-import { GeoclueService } from "./geoclue-service.js";
+import { GeoclueService, LOCATION_REFRESH_SECONDS } from "./geoclue-service.js";
 import { CalcPrayerTimes } from "./calc-prayer-times.js";
 
 export default class PrayerTime extends Extension {
@@ -134,7 +134,7 @@ export default class PrayerTime extends Extension {
         // try auto location if selected as a source, or if Mawaqit failed
         if (this._source === "auto") {
             try {
-                if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.refreshSchedule.bind(this));
+                if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.refreshSchedule.bind(this), LOCATION_REFRESH_SECONDS[this._settings.locationRefresh] ?? LOCATION_REFRESH_SECONDS.daily);
                 await this._geoclueService.start();
                 return new CalcPrayerTimes(ymd, GLib.TimeZone.new_local(), this._geoclueService.currentLocation, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
             } catch (e) {

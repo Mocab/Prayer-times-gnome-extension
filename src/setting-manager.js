@@ -57,6 +57,7 @@ class SettingManagerClass extends GObject.Object {
             { key: "asr-method", prop: "asrMethod", type: "string" },
             { key: "high-latitude-adjustment", prop: "highLatAdjustment", type: "string" },
             { key: "fallback-auto-location", prop: "isFallbackAutoLocation", type: "boolean" },
+            { key: "location-refresh", prop: "locationRefresh", type: "string" },
             { key: "include-sunnah", prop: "isIncludeSunnah", type: "boolean" },
             { key: "display-mode", prop: "displayMode", type: "string" },
             { key: "reminder", prop: "reminder", type: "int" },

@@ -30,6 +30,17 @@
                 <range min="-180" max="180"/>
                 <description>Custom longitude (earth x axis)</description>
             </key>
+            <key name="location-refresh" type="s">
+                <summary>Automatic location refresh</summary>
+                <default>'daily'</default>
+                <choices>
+                    <choice value='hourly'/>
+                    <choice value='6h'/>
+                    <choice value='daily'/>
+                </choices>
+                <description>How often the automatic location is updated.</description>
+            </key>
+
             <key name="preset-methods" type="s">
                 <summary>Preset methods</summary>
                 <default>'mwl'</default>
