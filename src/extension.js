@@ -7,21 +7,20 @@ import St from "gi://St";
 import { Extension, gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import { SettingManager } from "./setting-manager.js";
+import { Settings } from "./settings.js";
 import { Menu, Indicator } from "./ui.js";
 import { PrayerTimeProvider } from "./prayer-time-provider.js";
 
 export default class PrayerTime extends Extension {
     enable() {
-        this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this));
-        this._timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
+        this._settings = new Settings(this.getSettings());
+        this._displayModeSignal = this._settings.connect("changed::display-mode", refreshSchedule, true); // TODO: refresh ui only
 
         this._indicator = new Indicator(this.metadata.name);
-        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._timeFormat);
+        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._settings.timeFormat);
         this._indicator.setMenu(this._menu);
         Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
 
-        this._geoclueService = null;
         this._clockSignalId = null;
         this._soundFile = null;
         this._wakeProxy = null;
@@ -97,7 +96,7 @@ export default class PrayerTime extends Extension {
         this._indicator.text =
             this._settings.displayMode === "countdown" //
                 ? _("%s in %s").format(nextPrayer.name, `${String((minutesLeft / 60) | 0).padStart(2, "0")}:${String(minutesLeft % 60).padStart(2, "0")}`)
-                : _("%s: %s").format(nextPrayer.name, nextPrayer.time.format(this._timeFormat));
+                : _("%s: %s").format(nextPrayer.name, nextPrayer.time.format(this._settings.timeFormat));
     }
 
     async refreshSchedule() {
@@ -123,10 +122,6 @@ export default class PrayerTime extends Extension {
 
         this._soundFile = null;
     }
-    reloadMain() {
-        this._destroyMain();
-        this._init().catch((e) => console.error(`[${this.metadata.name}]: Reload error:`, e));
-    }
 
     disable() {
         if (this._wakeProxy) {
@@ -148,8 +143,7 @@ export default class PrayerTime extends Extension {
         }
         this._menu = null;
 
-        this._timeFormat = null;
-
+        this._settings.disconnect(this._displayModeSignal, true);
         if (this._settings) {
             this._settings.destroy();
             this._settings = null;

@@ -9,6 +9,8 @@ import { CalcPrayerTimes } from "./calc-prayer-times.js";
 export class PrayerTimeProvider {
     #settings;
     #source;
+    #settingsChangedId = null;
+    static #SETTING_KEYS = new Set(["source", "latitude", "longitude", "preset-methods", "fajr-angle", "isha-angle", "asr-method", "high-latitude-adjustment", "include-sunnah", "mawaqit-slug", "fallback-auto-location"]);
     #extensionName;
     #refreshSchedule;
     #geoclueService = null;
@@ -18,6 +20,10 @@ export class PrayerTimeProvider {
         this.#source = this.#settings.source;
         this.#extensionName = extensionName;
         this.#refreshSchedule = refreshSchedule;
+
+        this.#settingsChangedId = this.#settings.connect("changed", (settings, key) => {
+            if (PrayerTimeProvider.#SETTING_KEYS.has(key)) this.#refreshSchedule(); // TODO: pass schedule back?
+        });
     }
 
     async buildSchedule() {
@@ -80,7 +86,7 @@ export class PrayerTimeProvider {
             }
         }
 
-        let location = this.#settings.location;
+        let location = { latitude: this.#settings.latitude, longitude: this.#settings.longitude };
 
         // try to get location automatically if selected as a source or Mawaqit failed
         if (this.#source === "auto") {
@@ -99,7 +105,7 @@ export class PrayerTimeProvider {
         }
 
         // calculate locally
-        return new CalcPrayerTimes(ymd, cache.timeZone, location, this.#settings.calcMethod, this.#settings.asrMethod, this.#settings.highLatAdjustment);
+        return new CalcPrayerTimes(ymd, cache.timeZone, location, { id: this.#settings.presetMethod, fajr: this.#settings.fajrAngle, isha: this.#settings.ishaAngle }, this.#settings.asrMethod, this.#settings.highLatAdjustment);
     }
 
     #buildPrayerList(prayerTimes) {
@@ -119,5 +125,9 @@ export class PrayerTimeProvider {
 
     destroy() {
         this.#geoclueService?.destroy();
+        if (this.#settingsChangedId) {
+            this.#settings.disconnect(this.#settingsChangedId);
+            this.#settingsChangedId = null;
+        }
     }
 }
