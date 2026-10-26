@@ -13,7 +13,7 @@ import { PrayerTimeProvider } from "./prayer-time-provider.js";
 
 export default class PrayerTime extends Extension {
     enable() {
-        this._settings = new Settings(this.getSettings());
+        this._settings = new Settings(this.getSettings(), this.metadata);
         this._displayModeSignal = this._settings.connect("changed::display-mode", refreshSchedule, true); // TODO: refresh ui only
 
         this._indicator = new Indicator(this.metadata.name);

@@ -58,15 +58,14 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
         const sources = [
             { id: "mawaqit", name: _("Mawaqit") },
-            { id: "auto", name: _("Automatic Location") },
-            { id: "manual", name: _("Manual Location") },
+            { id: "local-calculation", name: _("Local calculation") },
         ];
         const sourcesRow = new Adw.ComboRow({
             title: _("Source"),
             model: new Gtk.StringList({ strings: sources.map((a) => a.name) }),
         });
         group.add(sourcesRow);
-        this.#bindMapping(gSettings, "source", sourcesRow, sources);
+        this.#bindMapping(gSettings, "prayer-time-source", sourcesRow, sources);
 
         return group;
     }
@@ -75,11 +74,17 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             title: _("Location Calculations"),
         });
 
+        const isAutoLocation = new Adw.SwitchRow({
+            title: _("Automatic location"),
+            subtitle: _("Automatically find location. Will default to manual location if geoclue fails."),
+        });
+        group.add(isAutoLocation);
+        gSettings.bind("auto-location", isAutoLocation, "active", Gio.SettingsBindFlags.DEFAULT);
+
         const customLocationRow = new Adw.ExpanderRow({
             title: _("Custom location"),
             subtitle: _('Used when "manual location" is selected or if Mawaqit and/or auto location fails.'),
         });
-
         const latitude = new Adw.SpinRow({
             title: _("Latitude"),
             digits: 4,
@@ -92,7 +97,6 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         customLocationRow.add_row(latitude);
         gSettings.bind("latitude", latitude, "value", Gio.SettingsBindFlags.DEFAULT);
-
         const longitude = new Adw.SpinRow({
             title: _("Longitude"),
             digits: 4,
@@ -105,7 +109,6 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         customLocationRow.add_row(longitude);
         gSettings.bind("longitude", longitude, "value", Gio.SettingsBindFlags.DEFAULT);
-
         group.add(customLocationRow);
 
         const presetMethods = [
@@ -192,7 +195,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
     #mawaqitGroup(gSettings) {
         const group = new Adw.PreferencesGroup({
             title: _("Mawaqit"),
-            description: _("Prayer data from %s.").format('<a href="https://mawaqit.net/">Mawaqit</a>'),
+            description: _("Prayer data from %s. On failure, falls back to local calculation mode.").format('<a href="https://mawaqit.net/">Mawaqit</a>'),
         });
 
         const getBaseMosqueTitle = () => gSettings.get_string("mawaqit-slug") || _("No mosque selected");
@@ -366,13 +369,6 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 return GLib.SOURCE_REMOVE;
             });
         });
-
-        const fallbackAutoLocationRow = new Adw.SwitchRow({
-            title: _("Fallback to automatic location"),
-            subtitle: _("If Mawaqit fails, fall back to automatic location. Will always fall back to manual location if automatic location is disabled or unavailable."),
-        });
-        group.add(fallbackAutoLocationRow);
-        gSettings.bind("fallback-auto-location", fallbackAutoLocationRow, "active", Gio.SettingsBindFlags.DEFAULT);
 
         return group;
     }

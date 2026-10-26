@@ -10,7 +10,7 @@ export class PrayerTimeProvider {
     #settings;
     #source;
     #settingsChangedId = null;
-    static #SETTING_KEYS = new Set(["source", "latitude", "longitude", "preset-methods", "fajr-angle", "isha-angle", "asr-method", "high-latitude-adjustment", "include-sunnah", "mawaqit-slug", "fallback-auto-location"]);
+    static #SETTING_KEYS = new Set(["prayerTimeSource", "isAutoLocation", "latitude", "longitude", "preset-methods", "fajr-angle", "isha-angle", "asr-method", "high-latitude-adjustment", "include-sunnah", "mawaqit-slug"]);
     #extensionName;
     #refreshSchedule;
     #geoclueService = null;
@@ -75,21 +75,17 @@ export class PrayerTimeProvider {
                 cache.mawaqitClient ??= new MawaqitClient(this.#extensionName, this.#settings.mawaqitSlug);
                 return await cache.mawaqitClient.fetchPrayerTimes(ymd);
             } catch (e) {
-                const useAuto = this.#settings.isFallbackAutoLocation;
+                this.#source = "local-calculation";
 
-                this.#source = useAuto ? "auto" : "manual";
-
-                const msg = useAuto //
-                    ? _("Failed to connect to Mawaqit. Defaulting to automatic location detection: %s")
-                    : _("Failed to connect to Mawaqit. Defaulting to manual location: %s");
-                Main.notify(this.#extensionName, msg.format(e.message));
+                const locationType = this.#settings.isAutoLocation ? "automatic location detection" : "manual location";
+                Main.notify(this.#extensionName, _("Failed to connect to Mawaqit. Defaulting to local calculations with %s: %s").format(locationType, e.message));
             }
         }
 
         let location = { latitude: this.#settings.latitude, longitude: this.#settings.longitude };
 
-        // try to get location automatically if selected as a source or Mawaqit failed
-        if (this.#source === "auto") {
+        // get location automatically if enabled and (if selected local calc as source or Mawaqit failed)
+        if (this.#settings.isAutoLocation) {
             try {
                 this.#geoclueService ??= await GeoclueService.create(this.#extensionName, this.#refreshSchedule);
 
@@ -99,7 +95,6 @@ export class PrayerTimeProvider {
             } catch (e) {
                 this.#geoclueService?.destroy(); // destroy if initialised before then failed on current run
                 this.#geoclueService = null;
-                this.#source = "manual";
                 Main.notify(this.#extensionName, _("Failed to find location automatically. Defaulting to manual calculations: %s").format(e.message));
             }
         }

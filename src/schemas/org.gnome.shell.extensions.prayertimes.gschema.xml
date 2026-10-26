@@ -7,17 +7,21 @@
                 <description>Used to track if extension was updated and display release note link.</description>
             </key>
 
-            <key name="source" type="s">
+            <key name="prayer-time-source" type="s">
                 <summary>Source</summary>
-                <default>'auto'</default>
+                <default>'local-calculation'</default>
                 <choices>
                     <choice value='mawaqit'/>
-                    <choice value='auto'/>
-                    <choice value='manual'/>
+                    <choice value='local-calculation'/>
                 </choices>
-                <description>The method used to determine the source for prayer times.</description>
+                <description>Method used to determine the source for prayer times.</description>
             </key>
 
+            <key name="auto-location" type="b">
+                <summary>Automatic location</summary>
+                <default>true</default>
+                <description>Automatically find location through geoclue.</description>
+            </key>
             <key name="latitude" type="d">
                 <summary>Latitude</summary>
                 <default>0.000</default>
@@ -89,11 +93,6 @@
                 <default>''</default>
                 <description>The slug of the selected Mawaqit mosque</description>
             </key>
-            <key name="fallback-auto-location" type="b">
-                <summary>Fallback to automatic location</summary>
-                <default>true</default>
-                <description>If mawaqit is enabled and fails then fallback to automatic location detection</description>
-            </key>
 
             <key name="display-mode" type="s">
                 <summary>Display mode</summary>
@@ -120,6 +119,24 @@
                 <default>0</default>
                 <range min="0" max="20"/>
                 <description>Number of minutes before a prayer to send a notification</description>
+            </key>
+
+
+            <!-- deprecated key, only delete after may 2027 (including migration code) -->
+            <key name="source" type="s">
+                <summary>Source</summary>
+                <default>'auto'</default>
+                <choices>
+                    <choice value='mawaqit'/>
+                    <choice value='auto'/>
+                    <choice value='manual'/>
+                </choices>
+                <description>The method used to determine the source for prayer times.</description>
+            </key>
+            <key name="fallback-auto-location" type="b">
+                <summary>Fallback to automatic location</summary>
+                <default>true</default>
+                <description>If mawaqit is enabled and fails then fallback to automatic location detection</description>
             </key>
     </schema>
 </schemalist>

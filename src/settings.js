@@ -5,11 +5,13 @@ import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.j
 class Settings {
     #gSettings = null;
     #desktopSettings = null;
-    constructor(gSettings) {
+    constructor(gSettings, metadata) {
         this.#gSettings = gSettings;
 
         const settingsSchema = [
             { prop: "source", key: "source", type: "s" },
+            { prop: "prayerTimeSource", key: "prayer-time-source", type: "s" },
+            { prop: "isAutoLocation", key: "auto-location", type: "b" },
             { prop: "latitude", key: "latitude", type: "d" },
             { prop: "longitude", key: "longitude", type: "d" },
             { prop: "presetMethod", key: "preset-methods", type: "s" },
@@ -19,7 +21,6 @@ class Settings {
             { prop: "highLatAdjustment", key: "high-latitude-adjustment", type: "s" },
             { prop: "isIncludeSunnah", key: "include-sunnah", type: "b" },
             { prop: "mawaqitSlug", key: "mawaqit-slug", type: "s" },
-            { prop: "isFallbackAutoLocation", key: "fallback-auto-location", type: "b" },
             { prop: "displayMode", key: "display-mode", type: "s" },
             { prop: "isNotify", key: "notify-prayer", type: "b" },
             { prop: "isSound", key: "sound-player", type: "b" },
@@ -50,7 +51,27 @@ class Settings {
             configurable: false,
         });
 
-        if (gSettings.get_int("version-cache") < metadata.version) {
+        const schemaVersion = gSettings.get_int("version-cache");
+
+        // setting migration
+        if (schemaVersion >= 16 && schemaVersion <= 19) {
+            switch (this.source) {
+                case "mawaqit":
+                    gSettings.set_string("prayer-time-source", "mawaqit");
+                    gSettings.set_boolean("auto-location", gSettings.get_boolean("fallback-auto-location"));
+                    break;
+                case "auto":
+                    gSettings.set_string("prayer-time-source", "local-calculation");
+                    gSettings.set_boolean("auto-location", true);
+                    break;
+                case "manual":
+                    gSettings.set_string("prayer-time-source", "local-calculation");
+                    gSettings.set_boolean("auto-location", false);
+                    break;
+            }
+        }
+
+        if (schemaVersion < metadata.version) {
             const systemSource = MessageTray.getSystemSource();
             const repoUrl = `https://github.com/Mocab/Prayer-times-gnome-extension/releases/tag/v${metadata.version}`;
 
