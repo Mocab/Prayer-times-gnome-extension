@@ -2,9 +2,9 @@ import GLib from "gi://GLib";
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import { MawaqitClient } from "./mawaqit-client.js";
-import { GeoclueService } from "./geoclue-service.js";
-import { CalcPrayerTimes } from "./calc-prayer-times.js";
+import { MawaqitProvider } from "./online/mawaqit-provider.js";
+import { GeoclueService } from "./local/geoclue-service.js";
+import { PrayerTimesCalculator } from "./local/prayer-times-calculator.js";
 
 export class PrayerTimeProvider {
     #settings;
@@ -72,7 +72,7 @@ export class PrayerTimeProvider {
         // try Mawaqit if selected
         if (this.#source === "mawaqit") {
             try {
-                cache.mawaqitClient ??= new MawaqitClient(this.#extensionName, this.#settings.mawaqitSlug);
+                cache.mawaqitClient ??= new MawaqitProvider(this.#extensionName, this.#settings.mawaqitSlug);
                 return await cache.mawaqitClient.fetchPrayerTimes(ymd);
             } catch (e) {
                 this.#source = "local-calculation";
@@ -100,7 +100,7 @@ export class PrayerTimeProvider {
         }
 
         // calculate locally
-        return new CalcPrayerTimes(ymd, cache.timeZone, location, { id: this.#settings.presetMethod, fajr: this.#settings.fajrAngle, isha: this.#settings.ishaAngle }, this.#settings.asrMethod, this.#settings.highLatAdjustment);
+        return new PrayerTimesCalculator(ymd, cache.timeZone, location, { id: this.#settings.presetMethod, fajr: this.#settings.fajrAngle, isha: this.#settings.ishaAngle }, this.#settings.asrMethod, this.#settings.highLatAdjustment);
     }
 
     #buildPrayerList(prayerTimes) {

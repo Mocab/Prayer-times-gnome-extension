@@ -7,9 +7,9 @@ import St from "gi://St";
 import { Extension, gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
-import { Settings } from "./settings.js";
+import { Settings } from "./utils/settings.js";
 import { Menu, Indicator } from "./ui.js";
-import { PrayerTimeProvider } from "./prayer-time-provider.js";
+import { ScheduleManager } from "./services/schedule-manager.js";
 
 export default class PrayerTime extends Extension {
     enable() {
@@ -32,7 +32,7 @@ export default class PrayerTime extends Extension {
 
         this._wallClock = new GnomeDesktop.WallClock();
 
-        this._scheduleProvider = new PrayerTimeProvider(this._settings, this.metadata.name, this.refreshSchedule.band(this));
+        this._scheduleManager = new ScheduleManager(this._settings, this.metadata.name, this.refreshSchedule.band(this));
         this._init().catch((e) => console.error(`[${this.metadata.name}]: Init error:`, e));
 
         // update extension on system wake
@@ -49,7 +49,7 @@ export default class PrayerTime extends Extension {
     }
 
     async _init() {
-        this._schedule = await this._scheduleProvider.buildSchedule();
+        this._schedule = await this._scheduleManager.buildSchedule();
 
         if (!this._menu) return;
 
@@ -100,7 +100,7 @@ export default class PrayerTime extends Extension {
     }
 
     async refreshSchedule() {
-        this._schedule = await this._scheduleProvider.buildSchedule();
+        this._schedule = await this._scheduleManager.buildSchedule();
 
         if (!this._menu) return;
         this._menu.update(this._schedule);
@@ -117,7 +117,7 @@ export default class PrayerTime extends Extension {
             this._clockSignalId = null;
         }
 
-        this._scheduleProvider.destroy();
+        this._scheduleManager.destroy();
         this._schedule = null;
 
         this._soundFile = null;
@@ -133,7 +133,7 @@ export default class PrayerTime extends Extension {
         }
 
         this._destroyMain();
-        this._scheduleProvider = null;
+        this._scheduleManager = null;
 
         if (this._wallClock) this._wallClock = null;
 
