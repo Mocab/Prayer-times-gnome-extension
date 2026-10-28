@@ -1,41 +1,34 @@
 import GLib from "gi://GLib";
-import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-
+import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import { MawaqitProvider } from "./online/mawaqit-provider.js";
-import { GeoclueService } from "./local/geoclue-service.js";
-import { PrayerTimesCalculator } from "./local/prayer-times-calculator.js";
+import { CalculationProvider } from "./local/calculation-provider.js";
 
 export class PrayerTimeProvider {
     #settings;
-    #source;
-    #settingsChangedId = null;
-    static #SETTING_KEYS = new Set(["prayerTimeSource", "isAutoLocation", "latitude", "longitude", "preset-methods", "fajr-angle", "isha-angle", "asr-method", "high-latitude-adjustment", "include-sunnah", "mawaqit-slug"]);
+    #sourceChangedId = null;
     #extensionName;
     #refreshSchedule;
-    #geoclueService = null;
+    #mawaqitInstance = null;
+    #localCalculationInstance = null;
 
     constructor(settings, extensionName, refreshSchedule) {
         this.#settings = settings;
-        this.#source = this.#settings.source;
         this.#extensionName = extensionName;
         this.#refreshSchedule = refreshSchedule;
 
-        this.#settingsChangedId = this.#settings.connect("changed", (settings, key) => {
-            if (PrayerTimeProvider.#SETTING_KEYS.has(key)) this.#refreshSchedule(); // TODO: pass schedule back?
-        });
+        this.#sourceChangedId = settings.connect("changed::prayer-time-source", refreshSchedule);
     }
 
     async buildSchedule() {
         const now = GLib.DateTime.new_now_local();
         const nowUsec = now.to_unix_usec();
-        const cache = { mawaqitClient: null, timeZone: GLib.TimeZone.new_local() }; // cache for subsequent getPrayerTimes() calls within this method instance only
 
-        const todayTimes = await this.#getPrayerTimes(now, cache);
+        const todayTimes = await this.#getPrayerTimes(now);
 
         // before today fajr
         if (nowUsec < todayTimes.fajr.to_unix_usec()) {
-            const yesterdayTimes = await this.#getPrayerTimes(now.add_days(-1), cache);
+            const yesterdayTimes = await this.#getPrayerTimes(now.add_days(-1));
             // edge case when new day but yesterday isha hasn't passed
             if (nowUsec < yesterdayTimes.isha.to_unix_usec()) {
                 const prayers = this.#buildPrayerList(yesterdayTimes);
@@ -48,7 +41,7 @@ export class PrayerTimeProvider {
         // after today isha
         if (nowUsec >= todayTimes.isha.to_unix_usec()) {
             return {
-                prayers: this.#buildPrayerList(await this.#getPrayerTimes(now.add_days(1), cache)),
+                prayers: this.#buildPrayerList(await this.#getPrayerTimes(now.add_days(1))),
                 nextPrayerI: 0,
             };
         }
@@ -61,68 +54,51 @@ export class PrayerTimeProvider {
     async advanceToNextDay(schedule) {
         // TODO: store schedule in class instead of passing in?
         return {
-            prayers: this.#buildPrayerList(await this.#getPrayerTimes(schedule.prayers[0].time.add_days(1))),
+            prayers: this.#buildPrayerList(await this.#getPrayerTimes(schedule.prayers[0].time.add_days(1))), // TODO:
             nextPrayerI: 0,
         };
     }
 
-    async #getPrayerTimes(dateTime, cache = { mawaqitClient: null, timeZone: GLib.TimeZone.new_local() }) {
+    async #getPrayerTimes(dateTime) {
         const ymd = dateTime.get_ymd();
 
         // try Mawaqit if selected
-        if (this.#source === "mawaqit") {
+        if (this.#settings.source === "mawaqit") {
             try {
-                cache.mawaqitClient ??= new MawaqitProvider(this.#extensionName, this.#settings.mawaqitSlug);
-                return await cache.mawaqitClient.fetchPrayerTimes(ymd);
+                // TODO: uncache when buildSchedule exits
+                this.#mawaqitInstance ??= new MawaqitProvider(this.#settings, this.#extensionName, this.#refreshSchedule);
+                return await this.#mawaqitInstance.fetchPrayerTimes(ymd);
             } catch (e) {
-                this.#source = "local-calculation";
-
+                this.#mawaqitInstance = null;
                 const locationType = this.#settings.isAutoLocation ? "automatic location detection" : "manual location";
                 Main.notify(this.#extensionName, _("Failed to connect to Mawaqit. Defaulting to local calculations with %s: %s").format(locationType, e.message));
             }
         }
 
-        let location = { latitude: this.#settings.latitude, longitude: this.#settings.longitude };
-
-        // get location automatically if enabled and (if selected local calc as source or Mawaqit failed)
-        if (this.#settings.isAutoLocation) {
-            try {
-                this.#geoclueService ??= await GeoclueService.create(this.#extensionName, this.#refreshSchedule);
-
-                const geoclueLocation = this.#geoclueService.location;
-                if (geoclueLocation.latitude == null || geoclueLocation.longitude == null) throw new Error(_("Geoclue returned no coordinates"));
-                location = geoclueLocation;
-            } catch (e) {
-                this.#geoclueService?.destroy(); // destroy if initialised before then failed on current run
-                this.#geoclueService = null;
-                Main.notify(this.#extensionName, _("Failed to find location automatically. Defaulting to manual calculations: %s").format(e.message));
-            }
-        }
-
-        // calculate locally
-        return new PrayerTimesCalculator(ymd, cache.timeZone, location, { id: this.#settings.presetMethod, fajr: this.#settings.fajrAngle, isha: this.#settings.ishaAngle }, this.#settings.asrMethod, this.#settings.highLatAdjustment);
+        this.#localCalculationInstance ??= new CalculationProvider(this.#settings, this.#extensionName, this.#refreshSchedule);
+        return this.#localCalculationInstance.calculatePrayerTimes();
     }
 
     #buildPrayerList(prayerTimes) {
-        const fajr = { id: "fajr", name: _("Fajr"), time: prayerTimes.fajr ?? null };
-        const dhuhr = {
-            id: "dhuhr",
-            name: prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"),
-            time: prayerTimes.dhuhr ?? null,
-        };
-        const asr = { id: "asr", name: _("Asr"), time: prayerTimes.asr ?? null };
-        const maghrib = { id: "maghrib", name: _("Maghrib"), time: prayerTimes.maghrib ?? null };
-        const isha = { id: "isha", name: _("Isha"), time: prayerTimes.isha ?? null };
+        const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null });
 
-        if (!this.#settings.isIncludeSunnah) return [fajr, dhuhr, asr, maghrib, isha];
-        return [fajr, { id: "duha", name: _("Duha"), time: prayerTimes.duha ?? null }, dhuhr, asr, maghrib, isha];
+        const fajr = prayer("fajr", _("Fajr"));
+        const dhuhr = prayer("dhuhr", prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"));
+        const asr = prayer("asr", _("Asr"));
+        const maghrib = prayer("maghrib", _("Maghrib"));
+        const isha = prayer("isha", _("Isha"));
+
+        return this.#settings.isIncludeSunnah //
+            ? [fajr, prayer("duha", _("Duha")), dhuhr, asr, maghrib, isha]
+            : [fajr, dhuhr, asr, maghrib, isha];
     }
 
     destroy() {
-        this.#geoclueService?.destroy();
-        if (this.#settingsChangedId) {
-            this.#settings.disconnect(this.#settingsChangedId);
-            this.#settingsChangedId = null;
+        if (this.#sourceChangedId) {
+            this.#settings.disconnect(this.#sourceChangedId);
+            this.#sourceChangedId = null;
         }
+        this.#mawaqitInstance?.destroy();
+        this.#localCalculationInstance?.destroy();
     }
 }

@@ -1,7 +1,6 @@
 import Gio from "gi://Gio";
 import GLib from "gi://GLib";
 import Soup from "gi://Soup";
-
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 
 Gio._promisify(Gio.File.prototype, "load_contents_async", "load_contents_finish");
@@ -10,12 +9,16 @@ Gio._promisify(Gio.File.prototype, "replace_contents_bytes_async", "replace_cont
 Gio._promisify(Soup.Session.prototype, "send_and_read_async", "send_and_read_finish");
 
 export class MawaqitClient {
+    #settings;
+    #slugChangedId = null;
     #cache;
     #timezone;
     #ready;
 
-    constructor(extensionName, slug) {
-        this.#ready = this.#init(extensionName, slug);
+    constructor(settings, extensionName, refreshSchedule) {
+        this.#settings = settings;
+        this.#slugChangedId = settings.connect("changed::mawaqit-slug", refreshSchedule);
+        this.#ready = this.#init(extensionName, settings.mawaqitSlug);
     }
     async #init(extensionName, slug) {
         this.#cache = await this.#generateCache(extensionName, slug);
@@ -107,5 +110,12 @@ export class MawaqitClient {
             timezone: timezoneMatch[1].replaceAll("\\/", "/"),
             calendar: calendar,
         };
+    }
+
+    destroy() {
+        if (this.#slugChangedId) {
+            this.#settings.disconnect(this.#slugChangedId);
+            this.#slugChangedId = null;
+        }
     }
 }

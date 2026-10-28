@@ -75,7 +75,7 @@ export default class PrayerTime extends Extension {
 
             // shift to tomorrow / next prayer
             if (this._schedule.nextPrayerI === this._schedule.prayers.length - 1) {
-                this._advanceToNextDay();
+                this._schedule = this._scheduleManager.advanceToNextDay(this._schedule);
             } else {
                 this._menu.highlightItem(++this._schedule.nextPrayerI);
             }
