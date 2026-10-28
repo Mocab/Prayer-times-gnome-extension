@@ -2,17 +2,15 @@ import Gio from "gi://Gio";
 import GObject from "gi://GObject";
 import St from "gi://St";
 import Clutter from "gi://Clutter";
-
-import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 
 export class Menu extends PopupMenu.PopupMenu {
-    constructor(sourceActor, arrowAlignment, arrowSide, extensionPath, timeFormat) {
-        super(sourceActor, arrowAlignment, arrowSide);
-        this.extensionPath = extensionPath;
+    constructor(sourceActor, settings, extensionPath) {
+        super(sourceActor, 0.5, St.Side.TOP);
+        this._settings = settings;
+        this._extensionPath = extensionPath;
         this._currentActiveIndex = null;
-        this._timeFormat = timeFormat;
     }
 
     populate(schedule) {
@@ -21,7 +19,7 @@ export class Menu extends PopupMenu.PopupMenu {
 
             menuItem.add_child(
                 new St.Icon({
-                    gicon: Gio.icon_new_for_string(`${this.extensionPath}/assets/icons/${prayer.id}.svg`),
+                    gicon: Gio.icon_new_for_string(`${this._extensionPath}/assets/icons/${prayer.id}.svg`),
                     icon_size: 20,
                 }),
             );
@@ -34,7 +32,7 @@ export class Menu extends PopupMenu.PopupMenu {
             menuItem.add_child(new St.Widget({ x_expand: true }));
             menuItem.add_child(
                 new St.Label({
-                    text: prayer.time.format(this._timeFormat),
+                    text: prayer.time.format(this._settings.timeFormat),
                 }),
             );
 
@@ -64,7 +62,7 @@ export class Menu extends PopupMenu.PopupMenu {
             if (nameLabel.text !== prayer.name) nameLabel.set_text(prayer.name);
 
             const timeLabel = children[children.length - 1];
-            const formattedTime = prayer.time.format(this._timeFormat);
+            const formattedTime = prayer.time.format(this._settings.timeFormat);
             if (timeLabel.text !== formattedTime) timeLabel.set_text(formattedTime);
         }
 
@@ -73,6 +71,8 @@ export class Menu extends PopupMenu.PopupMenu {
 
     destroy() {
         this.removeAll();
+        // TODO: this._settings = null;
+        // TODO: this._extensionPath = null;
         this._currentActiveIndex = null;
     }
 }

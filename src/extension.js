@@ -1,12 +1,8 @@
 import Gio from "gi://Gio";
-import GObject from "gi://GObject";
 import GLib from "gi://GLib";
 import GnomeDesktop from "gi://GnomeDesktop";
-import St from "gi://St";
-
-import { Extension, gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-
+import { Extension, gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import { Settings } from "./utils/settings.js";
 import { Menu, Indicator } from "./ui.js";
 import { ScheduleManager } from "./services/schedule-manager.js";
@@ -14,25 +10,25 @@ import { ScheduleManager } from "./services/schedule-manager.js";
 export default class PrayerTime extends Extension {
     enable() {
         this._settings = new Settings(this.getSettings(), this.metadata);
-        this._displayModeSignal = this._settings.connect("changed::display-mode", refreshSchedule, true); // TODO: refresh ui only
+        this._displayModeSignal = this._settings.connect("changed::display-mode", this.refreshSchedule.bind(this), true); // TODO: refresh ui only
 
         this._indicator = new Indicator(this.metadata.name);
-        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this.path, this._settings.timeFormat);
+        this._menu = new Menu(this._indicator, this._settings, this.path);
         this._indicator.setMenu(this._menu);
         Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
 
         this._clockSignalId = null;
         this._soundFile = null;
-        this._wakeProxy = null;
-        this._wakeSignalId = null;
         this._schedule = {
             prayers: null,
             nextPrayerI: null,
         };
+        this._wakeProxy = null;
+        this._wakeSignalId = null;
 
         this._wallClock = new GnomeDesktop.WallClock();
 
-        this._scheduleManager = new ScheduleManager(this._settings, this.metadata.name, this.refreshSchedule.band(this));
+        this._scheduleManager = new ScheduleManager(this._settings, this.metadata.name, this.refreshSchedule.bind(this));
         this._init().catch((e) => console.error(`[${this.metadata.name}]: Init error:`, e));
 
         // update extension on system wake
@@ -108,21 +104,6 @@ export default class PrayerTime extends Extension {
         this._tick();
     }
 
-    _destroyMain() {
-        this._indicator.text = "...";
-        this._menu.destroy();
-
-        if (this._clockSignalId) {
-            this._wallClock.disconnect(this._clockSignalId);
-            this._clockSignalId = null;
-        }
-
-        this._scheduleManager.destroy();
-        this._schedule = null;
-
-        this._soundFile = null;
-    }
-
     disable() {
         if (this._wakeProxy) {
             if (this._wakeSignalId) {
@@ -132,16 +113,30 @@ export default class PrayerTime extends Extension {
             this._wakeProxy = null;
         }
 
-        this._destroyMain();
-        this._scheduleManager = null;
+        if (this._wallClock) {
+            if (this._clockSignalId) {
+                this._wallClock.disconnect(this._clockSignalId);
+                this._clockSignalId = null;
+            }
+            this._wallClock = null;
+        }
 
-        if (this._wallClock) this._wallClock = null;
+        if (this._scheduleManager) {
+            this._scheduleManager.destroy();
+            this._scheduleManager = null;
+        }
+        this._schedule = null;
 
+        if (this._menu) {
+            this._menu.destroy();
+            this._menu = null;
+        }
         if (this._indicator) {
             this._indicator.destroy();
             this._indicator = null;
         }
-        this._menu = null;
+
+        this._soundFile = null;
 
         this._settings.disconnect(this._displayModeSignal, true);
         if (this._settings) {
