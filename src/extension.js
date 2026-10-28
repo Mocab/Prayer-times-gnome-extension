@@ -64,8 +64,8 @@ export default class PrayerTime extends Extension {
         // three second buffer
         if (diffUsec <= 3e6) {
             // notify prayer arrival
+            this._indicator.setArrival(nextPrayer.name);
             const text = _("Time for %s").format(nextPrayer.name);
-            this._indicator.text = text;
             if (this._settings.isNotify) Main.notify(this.metadata.name, text);
             if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, text, null);
 
@@ -83,16 +83,12 @@ export default class PrayerTime extends Extension {
         // prayer reminder
         if (minutesLeft === this._settings.reminder) {
             // minutesLeft will always > 0, so this._settings.reminder > 0 && ... is redundant
-            const text = _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder);
-            this._indicator.text = text;
-            if (this._settings.isNotify) Main.notify(this.metadata.name, text);
+            this._indicator.setReminder(nextPrayer.name, minutesLeft);
+            if (this._settings.isNotify) Main.notify(this.metadata.name, _("%s in %d minutes").format(nextPrayer.name, this._settings.reminder));
             return;
         }
 
-        this._indicator.text =
-            this._settings.displayMode === "countdown" //
-                ? _("%s in %s").format(nextPrayer.name, `${String((minutesLeft / 60) | 0).padStart(2, "0")}:${String(minutesLeft % 60).padStart(2, "0")}`)
-                : _("%s: %s").format(nextPrayer.name, nextPrayer.time.format(this._settings.timeFormat));
+        this._indicator.setUpcoming(nextPrayer.name, minutesLeft);
     }
 
     async refreshSchedule() {

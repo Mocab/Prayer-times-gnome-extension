@@ -88,12 +88,26 @@ class IndicatorClass extends PanelMenu.Button {
         this.add_child(this._label);
     }
 
-    get text() {
-        return this._label.text;
-    }
-
     set text(value) {
         if (this._label.text !== value) this._label.set_text(value);
+    }
+
+    setArrival(prayerName) {
+        this.text = _("Time for %s").format(prayerName);
+    }
+
+    setReminder(prayerName, minutesLeft) {
+        this.text = _("%s in %d minutes").format(prayerName, minutesLeft);
+    }
+
+    setUpcoming(prayer, minutesLeft) {
+        this.text = _("%s %s").format(prayer.name, this._formatTime(prayer, minutesLeft));
+    }
+    _formatTime(prayer, minutesLeft) {
+        if (this._settings.displayMode === "time") return prayer.time.format(this._timeFormat);
+
+        const reminder = minutesLeft % 60;
+        return `${(minutesLeft / 60) | 0}h ${reminder < 10 ? "0" + reminder : reminder}m`;
     }
 }
 export const Indicator = GObject.registerClass(IndicatorClass);
