@@ -8,16 +8,30 @@ export class PrayerTimeProvider {
     #settings;
     #sourceChangedId = null;
     #extensionName;
-    #refreshSchedule;
+    #reInit;
     #mawaqitInstance = null;
     #localCalculationInstance = null;
+    #schedule = {
+        prayers: [],
+        nextPrayerI: 0,
+    };
 
-    constructor(settings, extensionName, refreshSchedule) {
+    constructor(settings, extensionName, reInit) {
         this.#settings = settings;
         this.#extensionName = extensionName;
-        this.#refreshSchedule = refreshSchedule;
+        this.#reInit = reInit;
 
-        this.#sourceChangedId = settings.connect("changed::prayer-time-source", refreshSchedule);
+        this.#sourceChangedId = settings.connect("changed::prayer-time-source", reInit);
+    }
+
+    get schedule() {
+        return this.#schedule;
+    }
+    get nextPrayer() {
+        return this.#schedule.prayers[this.#schedule.nextPrayerI];
+    }
+    get nextPrayerIndex() {
+        return this.#schedule.nextPrayerI;
     }
 
     async buildSchedule() {
@@ -32,31 +46,38 @@ export class PrayerTimeProvider {
             // edge case when new day but yesterday isha hasn't passed
             if (nowUsec < yesterdayTimes.isha.to_unix_usec()) {
                 const prayers = this.#buildPrayerList(yesterdayTimes);
-                return { prayers, nextPrayerI: prayers.length - 1 };
+                this.#schedule = { prayers, nextPrayerI: prayers.length - 1 };
+                return;
             }
             // otherwise next is today fajr
-            return { prayers: this.#buildPrayerList(todayTimes), nextPrayerI: 0 };
+            this.#schedule = { prayers: this.#buildPrayerList(todayTimes), nextPrayerI: 0 };
+            return;
         }
 
         // after today isha
         if (nowUsec >= todayTimes.isha.to_unix_usec()) {
-            return {
+            this.#schedule = {
                 prayers: this.#buildPrayerList(await this.#getPrayerTimes(now.add_days(1))),
                 nextPrayerI: 0,
             };
+            return;
         }
 
         // between today fajr and isha
         const prayers = this.#buildPrayerList(todayTimes);
-        return { prayers, nextPrayerI: prayers.findIndex((p) => p.time.to_unix_usec() > nowUsec) };
+        this.#schedule = { prayers, nextPrayerI: prayers.findIndex((p) => p.time.to_unix_usec() > nowUsec) };
     }
 
-    async advanceToNextDay(schedule) {
-        // TODO: store schedule in class instead of passing in?
-        return {
-            prayers: this.#buildPrayerList(await this.#getPrayerTimes(schedule.prayers[0].time.add_days(1))), // TODO:
-            nextPrayerI: 0,
-        };
+    async advanceToNextPrayer() {
+        if (this.#schedule.nextPrayerI < this.#schedule.prayers.length - 1) {
+            this.#schedule.nextPrayerI++;
+        } else {
+            this.#schedule = {
+                prayers: this.#buildPrayerList(await this.#getPrayerTimes(this.#schedule.prayers[0].time.add_days(1))),
+                nextPrayerI: 0,
+            };
+        }
+        return this.#schedule;
     }
 
     async #getPrayerTimes(dateTime) {
@@ -66,7 +87,7 @@ export class PrayerTimeProvider {
         if (this.#settings.source === "mawaqit") {
             try {
                 // TODO: uncache when buildSchedule exits
-                this.#mawaqitInstance ??= new MawaqitProvider(this.#settings, this.#extensionName, this.#refreshSchedule);
+                this.#mawaqitInstance ??= new MawaqitProvider(this.#settings, this.#extensionName, this.#reInit);
                 return await this.#mawaqitInstance.fetchPrayerTimes(ymd);
             } catch (e) {
                 this.#mawaqitInstance = null;
@@ -75,7 +96,7 @@ export class PrayerTimeProvider {
             }
         }
 
-        this.#localCalculationInstance ??= new CalculationProvider(this.#settings, this.#extensionName, this.#refreshSchedule);
+        this.#localCalculationInstance ??= new CalculationProvider(this.#settings, this.#extensionName, this.#reInit);
         return this.#localCalculationInstance.calculatePrayerTimes();
     }
 
