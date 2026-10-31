@@ -1,30 +1,53 @@
+import Geoclue from "gi://Geoclue";
 import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
-import { GeoclueService } from "./geoclue-service.js";
 import { PrayerTimesCalculator } from "./prayer-times-calculator.js";
 
 export class CalculationProvider {
     #settings;
-    #settingsChangedId = null;
-    static #SETTING_KEYS = new Set(["isAutoLocation", "latitude", "longitude", "preset-methods", "fajr-angle", "isha-angle", "asr-method", "high-latitude-adjustment", "include-sunnah"]);
-    #extensionName;
-    #geoclueService = null;
+    #timezone = GLib.TimeZone.new_local();
+    #locationCache = { latitude: null, longitude: null };
 
-    constructor(settings, extensionName, refreshSchedule) {
+    constructor(settings) {
         this.#settings = settings;
-        this.#extensionName = extensionName;
+    }
+    static async init(settings, extensionName) {
+        const provider = new CalculationProvider(settings);
+        provider.#locationCache = await provider.#resolveLocation(extensionName);
+        return provider;
+    }
+    async #resolveLocation(extensionName) {
+        if (settings.isAutoLocation) {
+            try {
+                return await new Promise((resolve, reject) => {
+                    Geoclue.Simple.new_with_thresholds(extensionName, Geoclue.AccuracyLevel.NEIGHBORHOOD, 600, 5000, null, (_source, result) => {
+                        let proxy = null;
+                        try {
+                            proxy = Geoclue.Simple.new_with_thresholds_finish(result);
+                            const location = proxy?.get_location();
+                            if (!location) throw new Error(_("Automatic location is unavailable."));
 
-        this.#settingsChangedId = settings.connect("changed", (_settings, key) => {
-            if (CalculationProvider.#SETTING_KEYS.has(key)) refreshSchedule();
-        });
+                            resolve({ latitude: location.latitude, longitude: location.longitude });
+                        } catch (e) {
+                            reject(e);
+                        } finally {
+                            proxy?.get_client()?.call_stop(null, null);
+                        }
+                    });
+                });
+            } catch (e) {
+                Main.notify(extensionName, _("Failed to find location automatically. Defaulting to manual location: %s").format(e.message));
+            }
+        }
+        return { latitude: this.#settings.latitude, longitude: this.#settings.longitude };
     }
 
-    async calculatePrayerTimes(ymd) {
+    calculatePrayerTimes(ymd) {
         return new PrayerTimesCalculator(
             ymd,
-            GLib.TimeZone.new_local(), // TODO: cache timezone
-            await this.#resolveLocation(),
+            this.#timezone,
+            this.#locationCache,
             {
                 id: this.#settings.presetMethod,
                 fajr: this.#settings.fajrAngle,
@@ -33,30 +56,5 @@ export class CalculationProvider {
             this.#settings.asrMethod,
             this.#settings.highLatAdjustment,
         );
-    }
-
-    async #resolveLocation() {
-        if (this.#settings.isAutoLocation) {
-            try {
-                this.#geoclueService ??= GeoclueService(this.#extensionName);
-                return await this.#geoclueService.getLocation();
-            } catch (e) {
-                this.#geoclueService?.destroy();
-                this.#geoclueService = null;
-                Main.notify(this.#extensionName, _("Failed to find location automatically. Defaulting to manual calculations: %s").format(e.message));
-            }
-        }
-        return { latitude: this.#settings.latitude, longitude: this.#settings.longitude };
-    }
-
-    destroy() {
-        if (this.#settingsChangedId) {
-            this.#settings.disconnect(this.#settingsChangedId);
-            this.#settingsChangedId = null;
-        }
-        if (this.#geoclueService) {
-            this.#geoclueService.destroy();
-            this.#geoclueService = null;
-        }
     }
 }

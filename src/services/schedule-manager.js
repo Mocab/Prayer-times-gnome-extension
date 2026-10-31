@@ -1,27 +1,22 @@
 import GLib from "gi://GLib";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
-import { MawaqitProvider } from "./online/mawaqit-provider.js";
+import { MawaqitClient } from "./online/mawaqit-client.js";
 import { CalculationProvider } from "./local/calculation-provider.js";
 
 export class PrayerTimeProvider {
     #settings;
-    #sourceChangedId = null;
+    #settingsChangedId = null;
+    static #SETTING_KEYS = new Set(["prayer-time-source", "auto-location", "latitude", "longitude", "preset-methods", "fajr-angle", "isha-angle", "asr-method", "high-latitude-adjustment", "include-sunnah", "mawaqit-slug"]);
     #extensionName;
-    #reInit;
-    #mawaqitInstance = null;
-    #localCalculationInstance = null;
-    #schedule = {
-        prayers: [],
-        nextPrayerI: 0,
-    };
+    #schedule = { prayers: [], nextPrayerI: 0 };
 
     constructor(settings, extensionName, reInit) {
         this.#settings = settings;
         this.#extensionName = extensionName;
-        this.#reInit = reInit;
-
-        this.#sourceChangedId = settings.connect("changed::prayer-time-source", reInit);
+        this.#settingsChangedId = settings.connect("changed", (_settings, key) => {
+            if (PrayerTimeProvider.#SETTING_KEYS.has(key)) reInit();
+        });
     }
 
     get schedule() {
@@ -37,12 +32,13 @@ export class PrayerTimeProvider {
     async buildSchedule() {
         const now = GLib.DateTime.new_now_local();
         const nowUsec = now.to_unix_usec();
+        const instanceCache = { mawaqit: null, localCalculation: null };
 
-        const todayTimes = await this.#getPrayerTimes(now);
+        const todayTimes = await this.#getPrayerTimes(now, instanceCache);
 
         // before today fajr
         if (nowUsec < todayTimes.fajr.to_unix_usec()) {
-            const yesterdayTimes = await this.#getPrayerTimes(now.add_days(-1));
+            const yesterdayTimes = await this.#getPrayerTimes(now.add_days(-1), instanceCache);
             // edge case when new day but yesterday isha hasn't passed
             if (nowUsec < yesterdayTimes.isha.to_unix_usec()) {
                 const prayers = this.#buildPrayerList(yesterdayTimes);
@@ -57,7 +53,7 @@ export class PrayerTimeProvider {
         // after today isha
         if (nowUsec >= todayTimes.isha.to_unix_usec()) {
             this.#schedule = {
-                prayers: this.#buildPrayerList(await this.#getPrayerTimes(now.add_days(1))),
+                prayers: this.#buildPrayerList(await this.#getPrayerTimes(now.add_days(1)), instanceCache),
                 nextPrayerI: 0,
             };
             return;
@@ -80,24 +76,24 @@ export class PrayerTimeProvider {
         return this.#schedule;
     }
 
-    async #getPrayerTimes(dateTime) {
+    async #getPrayerTimes(dateTime, instanceCache = { mawaqit: null, localCalculation: null }) {
         const ymd = dateTime.get_ymd();
 
         // try Mawaqit if selected
         if (this.#settings.source === "mawaqit") {
             try {
                 // TODO: uncache when buildSchedule exits
-                this.#mawaqitInstance ??= new MawaqitProvider(this.#settings, this.#extensionName, this.#reInit);
-                return await this.#mawaqitInstance.fetchPrayerTimes(ymd);
+                instanceCache.mawaqit ??= new MawaqitClient.create(this.#settings, this.#extensionName);
+                return await instanceCache.mawaqit.fetchPrayerTimes(ymd);
             } catch (e) {
-                this.#mawaqitInstance = null;
+                instanceCache.mawaqit = null;
                 const locationType = this.#settings.isAutoLocation ? "automatic location detection" : "manual location";
                 Main.notify(this.#extensionName, _("Failed to connect to Mawaqit. Defaulting to local calculations with %s: %s").format(locationType, e.message));
             }
         }
 
-        this.#localCalculationInstance ??= new CalculationProvider(this.#settings, this.#extensionName, this.#reInit);
-        return this.#localCalculationInstance.calculatePrayerTimes();
+        instanceCache.localCalculation ??= new CalculationProvider().init(this.#settings, this.#extensionName);
+        return instanceCache.localCalculation.calculatePrayerTimes(ymd);
     }
 
     #buildPrayerList(prayerTimes) {
@@ -115,11 +111,9 @@ export class PrayerTimeProvider {
     }
 
     destroy() {
-        if (this.#sourceChangedId) {
-            this.#settings.disconnect(this.#sourceChangedId);
-            this.#sourceChangedId = null;
+        if (this.#settingsChangedId) {
+            this.#settings.disconnect(this.#settingsChangedId);
+            this.#settingsChangedId = null;
         }
-        this.#mawaqitInstance?.destroy();
-        this.#localCalculationInstance?.destroy();
     }
 }
