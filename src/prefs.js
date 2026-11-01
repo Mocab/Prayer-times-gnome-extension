@@ -198,6 +198,66 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             description: _("Prayer data from %s. On failure, falls back to local calculation mode.").format('<a href="https://mawaqit.net/">Mawaqit</a>'),
         });
 
+        const mosqueSlugInput = new Adw.EntryRow({
+            title: _("Mosque slug"),
+            show_apply_button: true,
+        });
+        const slugInfoIcon = new Gtk.Image({
+            icon_name: "dialog-information-symbolic",
+            tooltip_text: _("The unique identifier from the mosque's URL"),
+        });
+        mosqueSlugInput.add_suffix(slugInfoIcon);
+        const slugStatusIcon = new Gtk.Image({ visible: false });
+        function setStatus(type, tooltip = null) {
+            slugStatusIcon.remove_css_class("success");
+            slugStatusIcon.remove_css_class("error");
+            slugStatusIcon.add_css_class(type);
+            slugStatusIcon.icon_name = type === "success" ? "emblem-ok-symbolic" : "dialog-error-symbolic";
+            slugStatusIcon.tooltip_text = tooltip;
+            slugStatusIcon.visible = true;
+        }
+        setStatus("success");
+        mosqueSlugInput.add_prefix(slugStatusIcon);
+        const slugSpinner = new Gtk.Spinner({ visible: false });
+        mosqueSlugInput.add_prefix(slugSpinner);
+        group.add(mosqueSlugInput);
+        const httpSession = new Soup.Session({ timeout: 5 });
+        mosqueSlugInput.connect("apply", () => {
+            const slug = mosqueSlugInput.text.trim();
+            if (!slug) {
+                setStatus("error", _("Slug cannot be empty"));
+                return;
+            }
+
+            slugStatusIcon.visible = false;
+            mosqueSlugInput.sensitive = false;
+            slugSpinner.start();
+            slugSpinner.visible = true;
+
+            const message = Soup.Message.new("HEAD", "https://mawaqit.net/en/" + encodeURIComponent(slug));
+            httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+                try {
+                    session.send_and_read_finish(result);
+
+                    const statusCode = message.status_code;
+                    if (statusCode !== Soup.Status.OK) throw new Error(_("Server returned HTTP %d").format(statusCode));
+
+                    setStatus("success", _("OK"));
+                    gSettings.set_string("mawaqit-slug", slug);
+                } catch (e) {
+                    setStatus("error", _("Failed: %s".format(e.message)));
+                } finally {
+                    slugSpinner.visible = false;
+                    slugSpinner.stop();
+                    slugStatusIcon.visible = true;
+                    mosqueSlugInput.sensitive = true;
+                }
+            });
+        });
+
+        /*
+        // MAWAQIT API DOES NOT WORK, keep until further notice
+
         const getBaseMosqueTitle = () => gSettings.get_string("mawaqit-slug") || _("No mosque selected");
         const chosenMosqueRow = new Adw.ActionRow({
             title: getBaseMosqueTitle(),
@@ -369,6 +429,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 return GLib.SOURCE_REMOVE;
             });
         });
+        */
 
         return group;
     }
