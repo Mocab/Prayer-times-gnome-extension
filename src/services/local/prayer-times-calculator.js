@@ -4,7 +4,7 @@
 
 import GLib from "gi://GLib";
 
-export class CalcPrayerTimes {
+export class PrayerTimesCalculator {
     #location;
     #jdOffset;
     #sinLat;
