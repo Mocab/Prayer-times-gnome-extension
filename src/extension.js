@@ -28,9 +28,7 @@ export default class PrayerTime extends Extension {
 
         // update extension on system wake
         this._wakeSignalId = Gio.DBus.system.signal_subscribe("org.freedesktop.login1", "org.freedesktop.login1.Manager", "PrepareForSleep", "/org/freedesktop/login1", null, Gio.DBusSignalFlags.NONE, (_connection, _sender, _path, _interface, _signal, params) => {
-            if (!params.get_child_value(0).get_boolean()) {
-                this.reInit();
-            }
+            if (!params.get_child_value(0).get_boolean()) this.reInit();
         });
     }
 

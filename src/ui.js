@@ -71,8 +71,6 @@ export class Menu extends PopupMenu.PopupMenu {
 
     destroy() {
         this.removeAll();
-        // TODO: this._settings = null;
-        // TODO: this._extensionPath = null;
         this._currentActiveIndex = null;
     }
 }
