@@ -2,7 +2,7 @@ import Gio from "gi://Gio";
 import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 
-class Settings {
+export class Settings {
     #gSettings = null;
     #desktopSettings = null;
     constructor(gSettings, metadata) {
