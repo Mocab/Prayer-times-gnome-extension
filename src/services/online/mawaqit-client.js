@@ -5,7 +5,7 @@ import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.j
 
 Gio._promisify(Gio.File.prototype, "load_contents_async", "load_contents_finish");
 Gio._promisify(Gio.File.prototype, "make_directory_async", "make_directory_finish");
-Gio._promisify(Gio.File.prototype, "replace_contents_bytes_async", "replace_contents_bytes_finish");
+Gio._promisify(Gio.File.prototype, "replace_contents_bytes_async", "replace_contents_finish");
 Gio._promisify(Soup.Session.prototype, "send_and_read_async", "send_and_read_finish");
 
 export class MawaqitClient {
@@ -16,6 +16,7 @@ export class MawaqitClient {
     static async create(settings, extensionName) {
         const client = new MawaqitClient();
         client.#cache = await client.#generateCache(settings.mawaqitSlug, extensionName);
+        client.#timezone = GLib.TimeZone.new_identifier(client.#cache.timezone);
         return client;
     }
     async #generateCache(slug, extensionName) {
@@ -85,19 +86,19 @@ export class MawaqitClient {
         };
     }
 
-    async fetchPrayerTimes([year, month, day]) {
+    fetchPrayerTimes([year, month, day]) {
         // calendar months are 0 indexed, day are 1 indexed strings.
         const prayers = this.#cache.calendar[month - 1]?.[String(day)];
-        if (!prayers || prayers.length < 5) throw new Error(_("Unexpected prayer data structure or array length"));
+        if (prayers.length < 5 || prayers.length > 6) throw new Error(_("Unexpected prayer data structure or array length"));
 
         const toGDateTime = (timeStr) => GLib.DateTime.new(this.#timezone, year, month, day, Number(timeStr.slice(0, 2)), Number(timeStr.slice(3)), 0);
 
-        // format: [fajr, ...extra?, shuruq?, dhuhr, asr, maghrib, isha]
+        // prayers format: [fajr, shuruq?, dhuhr, asr, maghrib, isha]
         const maghribTimeStr = prayers.at(-2);
         const ishaTimeStr = prayers.at(-1);
         return {
             fajr: toGDateTime(prayers[0]),
-            duha: prayers.length >= 6 ? toGDateTime(prayers.at(-5)).add_minutes(15) : null,
+            duha: prayers.length >= 6 ? toGDateTime(prayers[1]).add_minutes(15) : null,
             dhuhr: toGDateTime(prayers.at(-4)),
             asr: toGDateTime(prayers.at(-3)),
             maghrib: toGDateTime(maghribTimeStr),
