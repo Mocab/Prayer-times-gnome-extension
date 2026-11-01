@@ -28,7 +28,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         // tab 2: display & notifications
         const displayNotificationTab = new Adw.PreferencesPage({
             title: _("Display & Notifications"),
-            icon_name: "system-run-symbolic", // TODO: update icon
+            icon_name: "preferences-desktop-display-symbolic",
         });
         displayNotificationTab.add(this.#displayGroup(gSettings));
         displayNotificationTab.add(this.#notificationGroup(gSettings));
