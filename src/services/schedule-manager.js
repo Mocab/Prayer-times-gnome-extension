@@ -4,7 +4,7 @@ import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.j
 import { MawaqitClient } from "./online/mawaqit-client.js";
 import { CalculationProvider } from "./local/calculation-provider.js";
 
-export class PrayerTimeProvider {
+export class ScheduleManager {
     #settings;
     #settingsChangedId = null;
     static #SETTING_KEYS = new Set(["prayer-time-source", "auto-location", "latitude", "longitude", "preset-methods", "fajr-angle", "isha-angle", "asr-method", "high-latitude-adjustment", "include-sunnah", "mawaqit-slug"]);
@@ -15,7 +15,7 @@ export class PrayerTimeProvider {
         this.#settings = settings;
         this.#extensionName = extensionName;
         this.#settingsChangedId = settings.connect("changed", (_settings, key) => {
-            if (PrayerTimeProvider.#SETTING_KEYS.has(key)) reInit();
+            if (ScheduleManager.#SETTING_KEYS.has(key)) reInit();
         });
     }
 
@@ -83,8 +83,8 @@ export class PrayerTimeProvider {
         if (this.#settings.source === "mawaqit") {
             try {
                 // TODO: uncache when buildSchedule exits
-                instanceCache.mawaqit ??= new MawaqitClient.create(this.#settings, this.#extensionName);
-                return await instanceCache.mawaqit.fetchPrayerTimes(ymd);
+                instanceCache.mawaqit ??= await MawaqitClient.create(this.#settings, this.#extensionName);
+                return instanceCache.mawaqit.fetchPrayerTimes(ymd);
             } catch (e) {
                 instanceCache.mawaqit = null;
                 const locationType = this.#settings.isAutoLocation ? "automatic location detection" : "manual location";
@@ -92,7 +92,7 @@ export class PrayerTimeProvider {
             }
         }
 
-        instanceCache.localCalculation ??= new CalculationProvider().init(this.#settings, this.#extensionName);
+        instanceCache.localCalculation ??= await CalculationProvider.init(this.#settings, this.#extensionName);
         return instanceCache.localCalculation.calculatePrayerTimes(ymd);
     }
 
