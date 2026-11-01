@@ -105,7 +105,7 @@ export class PrayerTimeProvider {
         const maghrib = prayer("maghrib", _("Maghrib"));
         const isha = prayer("isha", _("Isha"));
 
-        return this.#settings.isIncludeSunnah //
+        return this.#settings.isIncludeSunnah && prayerTimes.duha //
             ? [fajr, prayer("duha", _("Duha")), dhuhr, asr, maghrib, isha]
             : [fajr, dhuhr, asr, maghrib, isha];
     }
