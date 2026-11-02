@@ -21,7 +21,7 @@ export default class PrayerTime extends Extension {
 
         this._scheduleManager = new ScheduleManager(this._settings, this.metadata.name, this.reInit.bind(this));
         this._displayModeSignal = this._settings.connect("changed::display-mode", this.reInit.bind(this), true); // TODO: refresh ui only
-        this._reminderSignal = this._settings.connect("changed::reminder", this.reInit.bind(this));
+        this._reminderSignal = this._settings.connect("changed::reminder", this.reInit.bind(this)); // TODO: only refresh timeout
         this._init();
 
         // update extension on system wake
