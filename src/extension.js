@@ -11,8 +11,6 @@ export default class PrayerTime extends Extension {
         this._soundFile = null;
         this._timeoutId = null;
         this._startTimer = null;
-        this._wakeProxy = null;
-        this._wakeSignalId = null;
 
         this._settings = new Settings(this.getSettings(), this.metadata);
 
@@ -22,9 +20,9 @@ export default class PrayerTime extends Extension {
         Main.panel.addToStatusArea(this.uuid, this._indicator, 1, "center");
 
         this._scheduleManager = new ScheduleManager(this._settings, this.metadata.name, this.reInit.bind(this));
-        this._init();
-
         this._displayModeSignal = this._settings.connect("changed::display-mode", this.reInit.bind(this), true); // TODO: refresh ui only
+        this._reminderSignal = this._settings.connect("changed::reminder", this.reInit.bind(this));
+        this._init();
 
         // update extension on system wake
         this._wakeSignalId = Gio.DBus.system.signal_subscribe("org.freedesktop.login1", "org.freedesktop.login1.Manager", "PrepareForSleep", "/org/freedesktop/login1", null, Gio.DBusSignalFlags.NONE, (_connection, _sender, _path, _interface, _signal, params) => {
@@ -38,7 +36,7 @@ export default class PrayerTime extends Extension {
 
             this._menu.populate(this._scheduleManager.schedule);
 
-            if (this._settings.isSound) this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
+            this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg"); // TODO: don't include if sound disabled
 
             this._startTimer = this._settings.displayMode === "countdown" ? this._startCountdown : this._startStaticWait;
             this._scheduleNextEvent();
@@ -142,6 +140,10 @@ export default class PrayerTime extends Extension {
             if (this._displayModeSignal) {
                 this._settings.disconnect(this._displayModeSignal, true);
                 this._displayModeSignal = null;
+            }
+            if (this._reminderSignal) {
+                this._settings.disconnect(this._reminderSignal);
+                this._reminderSignal = null;
             }
             this._settings.destroy();
             this._settings = null;
