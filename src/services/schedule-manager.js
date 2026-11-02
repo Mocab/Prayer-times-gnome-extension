@@ -87,10 +87,13 @@ export class ScheduleManager {
     }
 
     #buildPrayerList(prayerTimes) {
-        const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null });
+        // TODO: cache icons
+        const iconPath = this.path + "/assets/icons/";
+        const iconSuffix = this.#settings.useSymbolicIcons ? "-symbolic.svg" : ".svg";
+        const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null, icon: Gio.icon_new_for_string(iconPath + id + iconSuffix) });
 
         const fajr = prayer("fajr", _("Fajr"));
-        const dhuhr = prayer("dhuhr", prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"));
+        const dhuhr = prayer("dhuhr", prayerTimes.dhuhr.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"));
         const asr = prayer("asr", _("Asr"));
         const maghrib = prayer("maghrib", _("Maghrib"));
         const isha = prayer("isha", _("Isha"));

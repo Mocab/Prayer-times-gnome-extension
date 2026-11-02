@@ -1,4 +1,3 @@
-import Gio from "gi://Gio";
 import GObject from "gi://GObject";
 import St from "gi://St";
 import Clutter from "gi://Clutter";
@@ -6,10 +5,9 @@ import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 
 export class Menu extends PopupMenu.PopupMenu {
-    constructor(sourceActor, settings, extensionPath) {
+    constructor(sourceActor, settings) {
         super(sourceActor, 0.5, St.Side.TOP);
         this._settings = settings;
-        this._extensionPath = extensionPath;
         this._currentActiveIndex = null;
     }
 
@@ -17,24 +15,10 @@ export class Menu extends PopupMenu.PopupMenu {
         for (const prayer of schedule.prayers) {
             const menuItem = new PopupMenu.PopupBaseMenuItem({ reactive: false, activate: false, hover: false });
 
-            menuItem.add_child(
-                new St.Icon({
-                    gicon: Gio.icon_new_for_string(`${this._extensionPath}/assets/icons/${prayer.id}.svg`),
-                    icon_size: 20,
-                }),
-            );
-            menuItem.add_child(
-                new St.Label({
-                    text: prayer.name,
-                    style_class: "prayer-name",
-                }),
-            );
+            menuItem.add_child(new St.Icon({ gicon: prayer.icon, icon_size: 20 }));
+            menuItem.add_child(new St.Label({ text: prayer.name, style_class: "prayer-name" }));
             menuItem.add_child(new St.Widget({ x_expand: true }));
-            menuItem.add_child(
-                new St.Label({
-                    text: prayer.time.format(this._settings.timeFormat),
-                }),
-            );
+            menuItem.add_child(new St.Label({ text: prayer.time.format(this._timeFormat) }));
 
             this.addMenuItem(menuItem);
         }
@@ -76,18 +60,43 @@ export class Menu extends PopupMenu.PopupMenu {
 }
 
 class IndicatorClass extends PanelMenu.Button {
-    _init(extensionName) {
+    _init(extensionName, settings, getNextPrayer) {
         super._init(0.5, extensionName, true);
+        this._settings = settings;
+        const toggleIcon = () => {
+            if (this._settings.indicatorStyle !== "name") {
+                if (!this._icon) {
+                    this._icon = new St.Icon({ icon_size: 16, style: "margin-right: 6px" });
+                    this._box.insert_child_at_index(this._icon, 0);
+                }
+                this.updateIcon(getNextPrayer());
+            } else if (this._icon) {
+                this._box.remove_child(this._icon);
+                this._icon.destroy();
+                this._icon = null;
+            }
+        };
+
+        this._box = new St.BoxLayout({
+            style: "padding: 0px 12px;",
+        });
+        toggleIcon();
         this._label = new St.Label({
             text: "...",
             y_align: Clutter.ActorAlign.CENTER,
-            style: "padding: 0px 12px;",
         });
-        this.add_child(this._label);
+        this._box.add_child(this._label);
+        this.add_child(this._box);
+
+        this._indicatorStyleSignal = this._settings.connect("changed::indicator-style", toggleIcon); // TODO: disconnect and handle adding new icon
     }
 
     set text(value) {
-        if (this._label.text !== value) this._label.set_text(value);
+        this._label.set_text(value);
+    }
+
+    updateIcon(icon) {
+        this._icon?.gicon = icon;
     }
 
     setUpcomingCountdown(prayerName, uSecLeft) {
@@ -96,7 +105,7 @@ class IndicatorClass extends PanelMenu.Button {
         this.text = _("%s %s").format(prayerName, `${Math.floor(totalMinutes / 60)}h ${minutes < 10 ? "0" + minutes : minutes}m`);
     }
     setUpcomingTime(prayer) {
-        this.text = _("%s %s").format(prayer.name, prayer.time.format(this._timeFormat));
+        this.text = _("%s %s").format(prayer.name, prayer.time.format(this._settings.timeFormat));
     }
 
     setReminder(prayerName, reminderDuration) {
@@ -105,6 +114,14 @@ class IndicatorClass extends PanelMenu.Button {
 
     setArrival(prayerName) {
         this.text = _("Time for %s").format(prayerName);
+    }
+
+    destroy() {
+        if (this._indicatorStyleSignal) {
+            this._settings.disconnectDesktop(this._indicatorStyleSignal);
+            this._indicatorStyleSignal = null;
+        }
+        super.destroy();
     }
 }
 export const Indicator = GObject.registerClass(IndicatorClass);
