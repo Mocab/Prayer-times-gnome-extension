@@ -32,15 +32,13 @@ export class ScheduleManager {
     async buildSchedule() {
         const provider = await this.#getProvider();
         const now = GLib.DateTime.new_now_local();
-        const nowUsec = now.to_unix_usec();
-
         const todayTimes = provider.getTimes(now);
 
         // before today fajr
-        if (nowUsec < todayTimes.fajr.to_unix_usec()) {
+        if (now.compare(todayTimes.fajr) < 0) {
             const yesterdayTimes = provider.getTimes(now.add_days(-1));
             // edge case when new day but yesterday isha hasn't passed
-            if (nowUsec < yesterdayTimes.isha.to_unix_usec()) {
+            if (now.compare(yesterdayTimes.isha) < 0) {
                 const prayers = this.#buildPrayerList(yesterdayTimes);
                 this.#schedule = { prayers, nextPrayerI: prayers.length - 1 };
                 return;
@@ -51,7 +49,7 @@ export class ScheduleManager {
         }
 
         // after today isha
-        if (nowUsec >= todayTimes.isha.to_unix_usec()) {
+        if (now.compare(todayTimes.isha) >= 0) {
             this.#schedule = {
                 prayers: this.#buildPrayerList(provider.getTimes(now.add_days(1))),
                 nextPrayerI: 0,
@@ -61,7 +59,7 @@ export class ScheduleManager {
 
         // between today fajr and isha
         const prayers = this.#buildPrayerList(todayTimes);
-        this.#schedule = { prayers, nextPrayerI: prayers.findIndex((p) => p.time.to_unix_usec() > nowUsec) };
+        this.#schedule = { prayers, nextPrayerI: prayers.findIndex((p) => p.time.compare(now) > 0) };
     }
 
     async advanceToNextPrayer() {
