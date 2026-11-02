@@ -30,15 +30,15 @@ export class ScheduleManager {
     }
 
     async buildSchedule() {
+        const provider = await this.#getProvider();
         const now = GLib.DateTime.new_now_local();
         const nowUsec = now.to_unix_usec();
-        const instanceCache = { mawaqit: null, localCalculation: null };
 
-        const todayTimes = await this.#getPrayerTimes(now, instanceCache);
+        const todayTimes = provider.getTimes(now);
 
         // before today fajr
         if (nowUsec < todayTimes.fajr.to_unix_usec()) {
-            const yesterdayTimes = await this.#getPrayerTimes(now.add_days(-1), instanceCache);
+            const yesterdayTimes = provider.getTimes(now.add_days(-1));
             // edge case when new day but yesterday isha hasn't passed
             if (nowUsec < yesterdayTimes.isha.to_unix_usec()) {
                 const prayers = this.#buildPrayerList(yesterdayTimes);
@@ -53,7 +53,7 @@ export class ScheduleManager {
         // after today isha
         if (nowUsec >= todayTimes.isha.to_unix_usec()) {
             this.#schedule = {
-                prayers: this.#buildPrayerList(await this.#getPrayerTimes(now.add_days(1)), instanceCache),
+                prayers: this.#buildPrayerList(provider.getTimes(now.add_days(1))),
                 nextPrayerI: 0,
             };
             return;
@@ -69,31 +69,23 @@ export class ScheduleManager {
             this.#schedule.nextPrayerI++;
         } else {
             this.#schedule = {
-                prayers: this.#buildPrayerList(await this.#getPrayerTimes(this.#schedule.prayers[0].time.add_days(1))),
+                prayers: this.#buildPrayerList((await this.#getProvider()).getTimes(this.#schedule.prayers[0].time.add_days(1))),
                 nextPrayerI: 0,
             };
         }
-        return this.#schedule;
     }
 
-    async #getPrayerTimes(dateTime, instanceCache = { mawaqit: null, localCalculation: null }) {
-        const ymd = dateTime.get_ymd();
-
-        // try Mawaqit if selected
+    async #getProvider() {
+        // to optimise for buildSchedule(), store all cache in provider class and provide getTimes() method
         if (this.#settings.source === "mawaqit") {
             try {
-                // TODO: uncache when buildSchedule exits
-                instanceCache.mawaqit ??= await MawaqitClient.create(this.#settings, this.#extensionName);
-                return instanceCache.mawaqit.fetchPrayerTimes(ymd);
+                return await MawaqitClient.create(this.#settings, this.#extensionName);
             } catch (e) {
-                instanceCache.mawaqit = null;
                 const locationType = this.#settings.isAutoLocation ? "automatic location detection" : "manual location";
                 Main.notify(this.#extensionName, _("Failed to connect to Mawaqit. Defaulting to local calculations with %s: %s").format(locationType, e.message));
             }
         }
-
-        instanceCache.localCalculation ??= await CalculationProvider.init(this.#settings, this.#extensionName);
-        return instanceCache.localCalculation.calculatePrayerTimes(ymd);
+        return await CalculationProvider.init(this.#settings, this.#extensionName);
     }
 
     #buildPrayerList(prayerTimes) {

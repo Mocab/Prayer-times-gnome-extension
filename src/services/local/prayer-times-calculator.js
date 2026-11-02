@@ -10,7 +10,8 @@ export class PrayerTimesCalculator {
     #sinLat;
     #cosLat;
 
-    constructor([year, month, day], timezone, location, calcMethod, asrMethod, highLatAdjustment) {
+    constructor(dateTime, timezone, location, calcMethod, asrMethod, highLatAdjustment) {
+        const [year, month, day] = dateTime;
         this.#location = location;
         // precompute the Julian Day offset for the target date: Glib Julian baseline offset (+1721425) + J2000 epoch baseline (-2451545.0) + noon adjustment factor (-0.5).
         this.#jdOffset = GLib.Date.new_dmy(day, month, year).get_julian() - 730120.5 - location.longitude / 360;
