@@ -145,7 +145,6 @@ export default class PrayerTime extends Extension {
                 this._settings.disconnect(this._reminderSignal);
                 this._reminderSignal = null;
             }
-            this._settings.destroy();
             this._settings = null;
         }
 
