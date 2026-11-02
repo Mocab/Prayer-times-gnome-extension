@@ -5,9 +5,8 @@ import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.j
 export class Settings {
     #gSettings = null;
     #desktopSettings = null;
-    constructor(gSettings, metadata) {
-        this.#gSettings = gSettings;
 
+    static {
         const settingsSchema = [
             { prop: "source", key: "source", type: "s" },
             { prop: "prayerTimeSource", key: "prayer-time-source", type: "s" },
@@ -33,7 +32,7 @@ export class Settings {
             b: "get_boolean",
         };
         for (const setting of settingsSchema) {
-            Object.defineProperty(Settings.prototype, setting.prop, {
+            Object.defineProperty(this.prototype, setting.prop, {
                 get() {
                     return this.#gSettings[getters[setting.type]](setting.key);
                 },
@@ -42,15 +41,18 @@ export class Settings {
             });
         }
 
-        this.#desktopSettings = Gio.Settings.new("org.gnome.desktop.interface");
-        Object.defineProperty(Settings.prototype, "timeFormat", {
+        Object.defineProperty(this.prototype, "timeFormat", {
             get() {
                 return this.#desktopSettings.get_string("clock-format") === "12h" ? _("%-I:%M %p") : _("%R");
             },
             enumerable: true,
             configurable: false,
         });
+    }
 
+    constructor(gSettings, metadata) {
+        this.#gSettings = gSettings;
+        this.#desktopSettings = Gio.Settings.new("org.gnome.desktop.interface");
         const schemaVersion = gSettings.get_int("version-cache");
 
         // setting migration
