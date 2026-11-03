@@ -4,16 +4,25 @@ import * as MessageTray from "resource:///org/gnome/shell/ui/messageTray.js";
 
 export class NotificationManager {
     #settings;
+    #extensionName;
     #notificationSource;
 
     constructor(extensionName, settings) {
         this.#settings = settings;
+        this.#extensionName = extensionName;
+        this.#createNotificationSource();
+    }
 
-        this.#notificationSource = new MessageTray.Source({
-            title: extensionName,
+    #createNotificationSource() {
+        const source = new MessageTray.Source({
+            title: this.#extensionName,
             iconName: "preferences-system-time-symbolic",
         });
-        Main.messageTray.add(this.#notificationSource);
+        source.connect("destroy", () => {
+            if (this.#notificationSource === source) this.#notificationSource = null;
+        });
+        this.#notificationSource = source;
+        Main.messageTray.add(source);
     }
 
     notifyArrival(prayer) {
@@ -27,13 +36,27 @@ export class NotificationManager {
     #triggerNotification(gicon, title, body) {
         if (!this.#settings.isNotify) return;
 
-        this.#notificationSource.addNotification(new MessageTray.Notification({ source: this.#notificationSource, title, body, gicon, isTransient: true }));
+        try {
+            if (!this.#notificationSource) this.#createNotificationSource();
+            const source = this.#notificationSource;
+            source.addNotification(new MessageTray.Notification({
+                source,
+                title,
+                body,
+                gicon,
+                urgency: MessageTray.Urgency.NORMAL,
+                isTransient: true,
+            }));
+        } catch (error) {
+            console.error("[Prayer Times] Failed to show notification:", error);
+        }
     }
 
     destroy() {
         if (this.#notificationSource) {
-            this.#notificationSource.destroy();
+            const source = this.#notificationSource;
             this.#notificationSource = null;
+            source.destroy();
         }
     }
 }

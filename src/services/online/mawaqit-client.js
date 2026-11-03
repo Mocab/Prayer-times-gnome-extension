@@ -91,7 +91,7 @@ export class MawaqitClient {
 
         // calendar months are 0 indexed, day are 1 indexed strings.
         const prayers = this.#cache.calendar[month - 1]?.[String(day)];
-        if (prayers.length < 5 || prayers.length > 6) throw new Error(_("Unexpected prayer data structure or array length"));
+        if (!Array.isArray(prayers) || prayers.length < 5 || prayers.length > 6) throw new Error(_("Unexpected prayer data structure or array length"));
 
         const toGDateTime = (timeStr) => GLib.DateTime.new(this.#timezone, year, month, day, Number(timeStr.slice(0, 2)), Number(timeStr.slice(3)), 0);
 

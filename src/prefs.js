@@ -19,10 +19,10 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         const mawaqitGroup = this.#mawaqitGroup(gSettings);
         calcTab.add(mawaqitGroup);
         function syncMawaqitVisibility() {
-            mawaqitGroup.visible = gSettings.get_string("source") === "mawaqit";
+            mawaqitGroup.visible = gSettings.get_string("prayer-time-source") === "mawaqit";
         }
         syncMawaqitVisibility();
-        gSettings.connect("changed::source", () => syncMawaqitVisibility());
+        gSettings.connect("changed::prayer-time-source", () => syncMawaqitVisibility());
         window.add(calcTab);
 
         // tab 2: display & notifications
@@ -245,7 +245,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                     setStatus("success", _("OK"));
                     gSettings.set_string("mawaqit-slug", slug);
                 } catch (e) {
-                    setStatus("error", _("Failed: %s".format(e.message)));
+                    setStatus("error", _("Failed: %s").format(e.message));
                 } finally {
                     slugSpinner.visible = false;
                     slugSpinner.stop();
