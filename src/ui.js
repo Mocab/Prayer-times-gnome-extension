@@ -88,7 +88,7 @@ class IndicatorClass extends PanelMenu.Button {
         this._box.add_child(this._label);
         this.add_child(this._box);
 
-        this._indicatorStyleSignal = this._settings.connect("changed::indicator-style", toggleIcon); // TODO: disconnect and handle adding new icon
+        this._indicatorStyleSignal = this._settings.connect("changed::indicator-style", toggleIcon);
     }
 
     set text(value) {
@@ -122,6 +122,23 @@ class IndicatorClass extends PanelMenu.Button {
             this._indicatorStyleSignal = null;
         }
         super.destroy();
+    }
+
+    setUpcomingCountdown(prayerName, uSecLeft) {
+        const totalMinutes = Math.floor(uSecLeft / 6e7);
+        const minutes = totalMinutes % 60;
+        this.text = _("%s %s").format(prayerName, `${Math.floor(totalMinutes / 60)}h ${minutes < 10 ? "0" + minutes : minutes}m`);
+    }
+    setUpcomingTime(prayer) {
+        this.text = _("%s %s").format(prayer.name, prayer.time.format(this._timeFormat));
+    }
+
+    setReminder(prayerName, reminderDuration) {
+        this.text = _("%s in %d minutes").format(prayerName, reminderDuration);
+    }
+
+    setArrival(prayerName) {
+        this.text = _("Time for %s").format(prayerName);
     }
 }
 export const Indicator = GObject.registerClass(IndicatorClass);
