@@ -9,6 +9,8 @@ import { ScheduleManager } from "./services/schedule-manager.js";
 
 export default class PrayerTime extends Extension {
     enable() {
+        this._isEnabled = true;
+        this._lifecycleGeneration = 0;
         this._soundFile = null;
         this._timeoutId = null;
         this._startTimer = null;
@@ -25,8 +27,9 @@ export default class PrayerTime extends Extension {
 
         this._init();
 
-        this._displayModeSignal = this._settings.connectDesktop("changed::display-mode", () => this.reInit()); // TODO: refresh ui only
         this._settingSignals = [
+            this._settings.connect("changed::display-mode", () => this._onDisplayModeChanged()),
+            this._settings.connect("changed::use-symbolic-icons", () => this._onSymbolicIconsChanged()),
             this._settings.connect("changed::reminder", () => this.reInit()), // TODO: only refresh timeout
             this._settings.connect("changed::indicator-alignment", () => this._onIndicatorReposition()),
             this._settings.connect("changed::indicator-order", () => this._onIndicatorReposition()),
@@ -39,8 +42,10 @@ export default class PrayerTime extends Extension {
     }
 
     async _init() {
+        const lifecycleGeneration = ++this._lifecycleGeneration;
         try {
-            await this._scheduleManager.buildSchedule();
+            const scheduleReady = await this._scheduleManager.buildSchedule();
+            if (!this._isEnabled || lifecycleGeneration !== this._lifecycleGeneration || !scheduleReady) return;
 
             this._indicator.updateIcon(this._scheduleManager.nextPrayer.icon);
             this._menu.populate(this._scheduleManager.schedule);
@@ -50,7 +55,7 @@ export default class PrayerTime extends Extension {
             this._startTimer = this._settings.displayMode === "countdown" ? this._startCountdown : this._startStaticWait;
             this._scheduleNextEvent();
         } catch (e) {
-            console.error(`[${this.metadata.name}]: Init error:`, e);
+            if (this._isEnabled && lifecycleGeneration === this._lifecycleGeneration) console.error(`[${this.metadata.name}]: Init error:`, e);
         }
     }
 
@@ -114,29 +119,64 @@ export default class PrayerTime extends Extension {
 
         this._scheduleTimeout(60, () => this._scheduleNextEvent());
     }
-    _onPrayerTime() {
+    async _onPrayerTime() {
+        const lifecycleGeneration = this._lifecycleGeneration;
         const nextPrayer = this._scheduleManager.nextPrayer;
+        if (!this._isEnabled || !nextPrayer) return;
+
         this._indicator.setArrival(nextPrayer.name);
         this._notifier.notifyArrival(nextPrayer);
-        if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, _("Call to prayer"), null);
+        if (this._settings.isSound) {
+            try {
+                global.display.get_sound_player().play_from_file(this._soundFile, _("Call to prayer"), null);
+            } catch (e) {
+                console.error(`[${this.metadata.name}]: Failed to play prayer audio:`, e);
+            }
+        }
 
-        this._scheduleManager.advanceToNextPrayer();
-        // if moved to new day
-        if (this._scheduleManager.nextPrayerIndex === 0) {
+        let movedToNextDay;
+        try {
+            movedToNextDay = await this._scheduleManager.advanceToNextPrayer();
+        } catch (e) {
+            console.error(`[${this.metadata.name}]: Failed to advance prayer schedule:`, e);
+            if (this._isEnabled && lifecycleGeneration === this._lifecycleGeneration) this.reInit();
+            return;
+        }
+        if (!this._isEnabled || lifecycleGeneration !== this._lifecycleGeneration) return;
+
+        if (movedToNextDay) {
             this._menu.update(this._scheduleManager.schedule);
         } else {
             this._menu.highlightItem(this._scheduleManager.nextPrayerIndex);
         }
-        this._indicator.updateIcon(nextPrayer.icon);
+        this._indicator.updateIcon(this._scheduleManager.nextPrayer.icon);
 
         this._scheduleTimeout(60, () => this._scheduleNextEvent());
     }
 
     reInit() {
+        if (!this._isEnabled) return;
         this._stopTimer();
         this._menu.destroy();
         this._init();
     }
+
+    _onDisplayModeChanged() {
+        if (!this._scheduleManager?.nextPrayer) return;
+
+        this._stopTimer();
+        this._startTimer = this._settings.displayMode === "countdown" ? this._startCountdown : this._startStaticWait;
+        this._scheduleNextEvent();
+    }
+
+    _onSymbolicIconsChanged() {
+        this._scheduleManager.refreshIcons();
+        this._menu.updateIcons(this._scheduleManager.schedule);
+        if (!this._scheduleManager.nextPrayer) return;
+
+        this._indicator.updateIcon(this._scheduleManager.nextPrayer.icon);
+    }
+
     _onIndicatorReposition() {
         const container = this._indicator.container;
         const currentParent = container.get_parent();
@@ -152,6 +192,8 @@ export default class PrayerTime extends Extension {
     }
 
     disable() {
+        this._isEnabled = false;
+        this._lifecycleGeneration++;
         this._stopTimer();
 
         if (this._wakeSignalId) {
@@ -160,10 +202,6 @@ export default class PrayerTime extends Extension {
         }
 
         if (this._settings) {
-            if (this._displayModeSignal) {
-                this._settings.disconnectDesktop(this._displayModeSignal);
-                this._displayModeSignal = null;
-            }
             if (this._settingSignals) {
                 this._settingSignals.forEach((id) => id && this._settings.disconnect(id));
                 this._settingSignals = null;

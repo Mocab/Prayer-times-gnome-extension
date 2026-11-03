@@ -44,8 +44,9 @@ export class CalculationProvider {
     }
 
     getTimes(dateTime) {
+        const [year, month, day] = dateTime.get_ymd();
         return new PrayerTimesCalculator(
-            dateTime,
+            [year, month, day],
             this.#timezone,
             this.#locationCache,
             {
