@@ -18,7 +18,7 @@ export class CalculationProvider {
         return provider;
     }
     async #resolveLocation(extensionName) {
-        if (settings.isAutoLocation) {
+        if (this.#settings.isAutoLocation) {
             try {
                 return await new Promise((resolve, reject) => {
                     Geoclue.Simple.new_with_thresholds(extensionName, Geoclue.AccuracyLevel.NEIGHBORHOOD, 600, 5000, null, (_source, result) => {
