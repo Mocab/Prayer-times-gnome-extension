@@ -18,7 +18,7 @@ export class Menu extends PopupMenu.PopupMenu {
             menuItem.add_child(new St.Icon({ gicon: prayer.icon, icon_size: 20 }));
             menuItem.add_child(new St.Label({ text: prayer.name, style_class: "prayer-name" }));
             menuItem.add_child(new St.Widget({ x_expand: true }));
-            menuItem.add_child(new St.Label({ text: prayer.time.format(this._timeFormat) }));
+            menuItem.add_child(new St.Label({ text: prayer.time.format(this._settings.timeFormat) }));
 
             this.addMenuItem(menuItem);
         }
