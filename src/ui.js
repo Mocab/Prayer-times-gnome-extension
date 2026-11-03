@@ -96,7 +96,7 @@ class IndicatorClass extends PanelMenu.Button {
     }
 
     updateIcon(icon) {
-        this._icon?.gicon = icon;
+        if (this._icon) this._icon.gicon = icon;
     }
 
     setUpcomingCountdown(prayerName, uSecLeft) {
