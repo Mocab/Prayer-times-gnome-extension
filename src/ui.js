@@ -60,27 +60,17 @@ export class Menu extends PopupMenu.PopupMenu {
 }
 
 class IndicatorClass extends PanelMenu.Button {
-    _init(extensionName, settings, getNextPrayer) {
+    _init(extensionName, settings, reInit) {
         super._init(0.5, extensionName, true);
         this._settings = settings;
-        const toggleIcon = () => {
-            if (this._settings.indicatorStyle !== "name") {
-                if (!this._icon) {
-                    this._icon = new St.Icon({ icon_size: 16, style: "margin-right: 6px" });
-                    this._box.insert_child_at_index(this._icon, 0);
-                }
-                this.updateIcon(getNextPrayer());
-            } else if (this._icon) {
-                this._box.remove_child(this._icon);
-                this._icon.destroy();
-                this._icon = null;
-            }
-        };
 
         this._box = new St.BoxLayout({
             style: "padding: 0px 12px;",
         });
-        toggleIcon();
+        if (this._settings.indicatorStyle !== "name") {
+            this._icon = new St.Icon({ icon_size: 16, style: "margin-right: 6px" });
+            this._box.add_child(this._icon);
+        }
         this._label = new St.Label({
             text: "...",
             y_align: Clutter.ActorAlign.CENTER,
@@ -88,7 +78,7 @@ class IndicatorClass extends PanelMenu.Button {
         this._box.add_child(this._label);
         this.add_child(this._box);
 
-        this._indicatorStyleSignal = this._settings.connect("changed::indicator-style", toggleIcon);
+        this._indicatorStyleSignal = this._settings.connect("changed::indicator-style", () => reInit());
     }
 
     set text(value) {
@@ -118,7 +108,7 @@ class IndicatorClass extends PanelMenu.Button {
 
     destroy() {
         if (this._indicatorStyleSignal) {
-            this._settings.disconnectDesktop(this._indicatorStyleSignal);
+            this._settings.disconnectDesktop(this._indicatorStyleSignal); // FIXME:
             this._indicatorStyleSignal = null;
         }
         super.destroy();

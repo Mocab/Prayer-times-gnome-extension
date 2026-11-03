@@ -17,7 +17,7 @@ export default class PrayerTime extends Extension {
 
         this._scheduleManager = new ScheduleManager(this._settings, this.metadata.name, () => this.reInit());
 
-        this._indicator = new Indicator(this.metadata.name, this._settings, () => this._scheduleManager.nextPrayer);
+        this._indicator = new Indicator(this.metadata.name, this._settings, () => this.reInit());
         this._menu = new Menu(this._indicator, this._settings);
         this._indicator.setMenu(this._menu);
         Main.panel.addToStatusArea(this.uuid, this._indicator, this._settings.indicatorOrder, this._settings.indicatorAlignment);
