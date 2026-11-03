@@ -9,12 +9,12 @@ export class ScheduleManager {
     #settings;
     #settingsChangedId = null;
     static #SETTING_KEYS = new Set(["prayer-time-source", "auto-location", "latitude", "longitude", "preset-methods", "fajr-angle", "isha-angle", "asr-method", "high-latitude-adjustment", "include-sunnah", "mawaqit-slug"]);
-    #extensionName;
+    #metadata;
     #schedule = { prayers: [], nextPrayerI: 0 };
 
-    constructor(settings, extensionName, reInit) {
+    constructor(settings, metadata, reInit) {
         this.#settings = settings;
-        this.#extensionName = extensionName;
+        this.#metadata = metadata;
         this.#settingsChangedId = settings.connect("changed", (_settings, key) => {
             if (ScheduleManager.#SETTING_KEYS.has(key)) reInit();
         });
@@ -78,18 +78,18 @@ export class ScheduleManager {
         // to optimise for buildSchedule(), store all cache in provider class and provide getTimes() method
         if (this.#settings.source === "mawaqit") {
             try {
-                return await MawaqitClient.create(this.#settings, this.#extensionName);
+                return await MawaqitClient.create(this.#settings, this.#metadata.name);
             } catch (e) {
                 const locationType = this.#settings.isAutoLocation ? "automatic location detection" : "manual location";
-                Main.notify(this.#extensionName, _("Failed to connect to Mawaqit. Defaulting to local calculations with %s: %s").format(locationType, e.message));
+                Main.notify(this.#metadata.name, _("Failed to connect to Mawaqit. Defaulting to local calculations with %s: %s").format(locationType, e.message));
             }
         }
-        return await CalculationProvider.init(this.#settings, this.#extensionName);
+        return await CalculationProvider.init(this.#settings, this.#metadata.name);
     }
 
     #buildPrayerList(prayerTimes) {
         // TODO: cache icons
-        const iconPath = this.path + "/assets/icons/";
+        const iconPath = this.#metadata.path + "/assets/icons/";
         const iconSuffix = this.#settings.useSymbolicIcons ? "-symbolic.svg" : ".svg";
         const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null, icon: Gio.icon_new_for_string(iconPath + id + iconSuffix) });
 

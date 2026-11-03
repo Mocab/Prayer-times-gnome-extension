@@ -15,7 +15,7 @@ export default class PrayerTime extends Extension {
 
         this._settings = new Settings(this.getSettings(), this.metadata);
 
-        this._scheduleManager = new ScheduleManager(this._settings, this.metadata.name, () => this.reInit());
+        this._scheduleManager = new ScheduleManager(this._settings, this.metadata, () => this.reInit());
 
         this._indicator = new Indicator(this.metadata.name, this._settings, () => this.reInit());
         this._menu = new Menu(this._indicator, this._settings);
