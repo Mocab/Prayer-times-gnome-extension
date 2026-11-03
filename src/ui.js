@@ -3,6 +3,7 @@ import St from "gi://St";
 import Clutter from "gi://Clutter";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
+import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 
 export class Menu extends PopupMenu.PopupMenu {
     constructor(sourceActor, settings) {
@@ -112,23 +113,6 @@ class IndicatorClass extends PanelMenu.Button {
             this._indicatorStyleSignal = null;
         }
         super.destroy();
-    }
-
-    setUpcomingCountdown(prayerName, uSecLeft) {
-        const totalMinutes = Math.floor(uSecLeft / 6e7);
-        const minutes = totalMinutes % 60;
-        this.text = _("%s %s").format(prayerName, `${Math.floor(totalMinutes / 60)}h ${minutes < 10 ? "0" + minutes : minutes}m`);
-    }
-    setUpcomingTime(prayer) {
-        this.text = _("%s %s").format(prayer.name, prayer.time.format(this._timeFormat));
-    }
-
-    setReminder(prayerName, reminderDuration) {
-        this.text = _("%s in %d minutes").format(prayerName, reminderDuration);
-    }
-
-    setArrival(prayerName) {
-        this.text = _("Time for %s").format(prayerName);
     }
 }
 export const Indicator = GObject.registerClass(IndicatorClass);
