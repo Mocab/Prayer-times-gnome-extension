@@ -1,292 +1,194 @@
 import Gio from "gi://Gio";
-import GObject from "gi://GObject";
 import GLib from "gi://GLib";
-import GnomeDesktop from "gi://GnomeDesktop";
-import St from "gi://St";
-
-import { Extension, gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
-
-import { SettingManager } from "./setting-manager.js";
+import { Extension, gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
+import { Settings } from "./utils/settings.js";
 import { Menu, Indicator } from "./ui.js";
-import { NotificationManager } from "./notification-manager.js";
-import { MawaqitClient } from "./mawaqit-client.js";
-import { GeoclueService } from "./geoclue-service.js";
-import { CalcPrayerTimes } from "./calc-prayer-times.js";
+import { NotificationManager } from "./utils/notification-manager.js";
+import { ScheduleManager } from "./services/schedule-manager.js";
 
 export default class PrayerTime extends Extension {
     enable() {
-        this._settings = new SettingManager(this.getSettings(), this.metadata, this.reloadMain.bind(this), this.updateIndicatorPosition.bind(this));
-        this._timeFormat = this._settings.clockFormat === "12h" ? _("%-I:%M %p") : _("%R");
+        this._soundFile = null;
+        this._timeoutId = null;
+        this._startTimer = null;
 
-        this._indicator = new Indicator(this.metadata.name, this._settings, this._timeFormat);
-        this._menu = new Menu(this._indicator, 0.5, St.Side.TOP, this._timeFormat);
+        this._settings = new Settings(this.getSettings(), this.metadata);
+
+        this._scheduleManager = new ScheduleManager(this._settings, this.metadata.name, () => this.reInit());
+
+        this._indicator = new Indicator(this.metadata.name, this._settings, () => this._scheduleManager.nextPrayer);
+        this._menu = new Menu(this._indicator, this._settings);
         this._indicator.setMenu(this._menu);
         Main.panel.addToStatusArea(this.uuid, this._indicator, this._settings.indicatorOrder, this._settings.indicatorAlignment);
-
         this._notifier = new NotificationManager(this.metadata.name, this._settings);
 
-        this._geoclueService = null;
-        this._clockSignalId = null;
-        this._soundFile = null;
-        this._wakeProxy = null;
-        this._wakeSignalId = null;
+        this._init();
 
-        this._wallClock = new GnomeDesktop.WallClock();
-
-        this._source = null;
-        this._schedule = {
-            prayers: null,
-            nextPrayerI: null,
-        };
-        this._lastReminderTime = null;
-        this._lastArrivedPrayerTime = null;
-        this._init().catch((e) => console.error(`[${this.metadata.name}]: Init error:`, e));
+        this._displayModeSignal = this._settings.connectDesktop("changed::display-mode", () => this.reInit()); // TODO: refresh ui only
+        this._settingSignals = [
+            this._settings.connect("changed::reminder", () => this.reInit()), // TODO: only refresh timeout
+            this._settings.connect("changed::indicator-alignment", () => this._onIndicatorReposition()),
+            this._settings.connect("changed::indicator-order", () => this._onIndicatorReposition()),
+        ];
 
         // update extension on system wake
-        Gio.DBusProxy.new_for_bus(Gio.BusType.SYSTEM, Gio.DBusProxyFlags.NONE, null, "org.freedesktop.login1", "/org/freedesktop/login1", "org.freedesktop.login1.Manager", null, (source, result) => {
-            try {
-                this._wakeProxy = Gio.DBusProxy.new_for_bus_finish(result);
-                this._wakeSignalId = this._wakeProxy.connect("g-signal", (proxy, senderName, signalName, parameters) => {
-                    if (signalName === "PrepareForSleep" && !parameters.recursiveUnpack()[0]) this.refreshSchedule();
-                });
-            } catch (e) {
-                Main.notify(this.metadata.name, _("Failed to detect system sleep. Prayer times won't update automatically when your computer wakes up: %s").format(e.message));
-            }
+        this._wakeSignalId = Gio.DBus.system.signal_subscribe("org.freedesktop.login1", "org.freedesktop.login1.Manager", "PrepareForSleep", "/org/freedesktop/login1", null, Gio.DBusSignalFlags.NONE, (_connection, _sender, _path, _interface, _signal, params) => {
+            if (!params.get_child_value(0).get_boolean()) this.reInit();
         });
     }
 
     async _init() {
-        this._source = this._settings.source;
-        this._schedule = await this._resolveCurrentPrayerContext();
+        try {
+            await this._scheduleManager.buildSchedule();
 
-        if (!this._menu) return;
+            this._indicator.updateIcon(this._scheduleManager.nextPrayer.icon);
+            this._menu.populate(this._scheduleManager.schedule);
 
-        this._menu.populate(this._schedule);
+            this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg"); // TODO: don't include if sound disabled
 
-        if (this._settings.isSound) this._soundFile = Gio.File.new_for_path(this.path + "/assets/audio/athan.ogg");
-
-        this._tick();
-        this._clockSignalId = this._wallClock.connect("notify::clock", () => this._tick());
-    }
-    async _resolveCurrentPrayerContext() {
-        const now = GLib.DateTime.new_now_local();
-        const nowUsec = now.to_unix_usec();
-        const cache = { mawaqitClient: null }; // cache Mawaqit prayer times for subsequent calls within this method
-
-        const todayTimes = await this._getPrayerTimes(now, cache);
-
-        // before today fajr
-        if (todayTimes.fajr.to_unix_usec() > nowUsec) {
-            const yesterdayTimes = await this._getPrayerTimes(now.add_days(-1), cache);
-            // edge case when new day but yesterday isha hasn't passed
-            if (yesterdayTimes.isha.to_unix_usec() > nowUsec) {
-                const prayers = this._buildPrayerList(yesterdayTimes);
-                return { prayers, nextPrayerI: prayers.length - 1 };
-            }
-            // otherwise next is today fajr
-            return { prayers: this._buildPrayerList(todayTimes), nextPrayerI: 0 };
-        }
-
-        // after today isha
-        if (nowUsec >= todayTimes.isha.to_unix_usec()) {
-            return {
-                prayers: this._buildPrayerList(await this._getPrayerTimes(now.add_days(1), cache)),
-                nextPrayerI: 0,
-            };
-        }
-
-        // between today fajr and isha
-        const prayers = this._buildPrayerList(todayTimes);
-        for (let i = 1; i < prayers.length; i++) {
-            if (prayers[i].time.to_unix_usec() > nowUsec) return { prayers, nextPrayerI: i };
+            this._startTimer = this._settings.displayMode === "countdown" ? this._startCountdown : this._startStaticWait;
+            this._scheduleNextEvent();
+        } catch (e) {
+            console.error(`[${this.metadata.name}]: Init error:`, e);
         }
     }
 
-    _buildPrayerList(prayerTimes) {
-        // TODO: update only time when moving to a new day instead of recreating the array
-        const iconPath = this.path + "/assets/icons/";
-        const iconSuffix = this._settings.useSymbolicIcons ? "-symbolic.svg" : ".svg";
-        const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null, icon: Gio.icon_new_for_string(iconPath + id + iconSuffix) });
-
-        const fajr = prayer("fajr", _("Fajr"));
-        const dhuhr = prayer("dhuhr", prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"));
-        const asr = prayer("asr", _("Asr"));
-        const maghrib = prayer("maghrib", _("Maghrib"));
-        const isha = prayer("isha", _("Isha"));
-
-        return this._settings.isIncludeSunnah //
-            ? [fajr, prayer("duha", _("Duha")), dhuhr, asr, maghrib, isha]
-            : [fajr, dhuhr, asr, maghrib, isha];
+    _stopTimer() {
+        if (this._timeoutId) {
+            GLib.source_remove(this._timeoutId);
+            this._timeoutId = null;
+        }
     }
 
-    async _getPrayerTimes(dateTime, cache = { mawaqitClient: null }) {
-        const ymd = dateTime.get_ymd();
-
-        // try Mawaqit if selected
-        if (this._source === "mawaqit") {
-            try {
-                if (!cache.mawaqitClient) cache.mawaqitClient = new MawaqitClient(this.metadata.name, this._settings.mawaqitSlug);
-                return await cache.mawaqitClient.fetchPrayerTimes(ymd);
-            } catch (e) {
-                const useAuto = this._settings.isFallbackAutoLocation;
-
-                this._source = useAuto ? "auto" : "manual";
-
-                const msg = useAuto ? _("Failed to connect to Mawaqit. Defaulting to automatic location detection: %s") : _("Failed to connect to Mawaqit. Defaulting to manual location: %s");
-                Main.notify(this.metadata.name, msg.format(e.message));
-            }
-        }
-
-        // try auto location if selected as a source, or if Mawaqit failed
-        if (this._source === "auto") {
-            try {
-                if (!this._geoclueService) this._geoclueService = new GeoclueService(this.metadata.name, this.refreshSchedule.bind(this));
-                await this._geoclueService.start();
-                return new CalcPrayerTimes(ymd, GLib.TimeZone.new_local(), this._geoclueService.currentLocation, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
-            } catch (e) {
-                if (this._geoclueService) this._destroyGeoclue(); // destroy if initialised before then failed on current run
-                this._source = "manual";
-                Main.notify(this.metadata.name, _("Failed to find location automatically. Defaulting to manual calculations: %s").format(e.message));
-            }
-        }
-
-        // final fallback (manual)
-        return new CalcPrayerTimes(ymd, GLib.TimeZone.new_local(), this._settings.location, this._settings.calcMethod, this._settings.asrMethod, this._settings.highLatAdjustment);
+    _scheduleTimeout(seconds, callback) {
+        this._stopTimer();
+        this._timeoutId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, seconds, () => {
+            this._timeoutId = null;
+            callback();
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
-    _tick() {
-        const nextPrayer = this._schedule.prayers[this._schedule.nextPrayerI];
-        const diffUsec = nextPrayer.time.to_unix_usec() - GLib.get_real_time();
+    _startCountdown(targetTimeUsec, onComplete) {
+        const nextPrayerName = this._scheduleManager.nextPrayer.name;
 
-        const isArrived = diffUsec <= 3e6; // three second buffer
-        // TODO: optimise so it doesn't run every tick
-        this._indicator.icon(nextPrayer);
-        if (isArrived) {
-            // notify prayer arrival
-            this._indicator.setArrival(nextPrayer.name);
-            const prayerTime = nextPrayer.time.to_unix_usec();
-            if (this._lastArrivedPrayerTime === prayerTime) return;
-            this._lastArrivedPrayerTime = prayerTime;
+        const tick = () => {
+            const uSecLeft = targetTimeUsec - GLib.get_real_time();
 
-            this._notifier.notifyArrival(nextPrayer);
-            if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, _("Call to prayer"), null);
-
-            // shift to tomorrow / next prayer
-            if (this._schedule.nextPrayerI === this._schedule.prayers.length - 1) {
-                this._advanceToNextDay();
-            } else {
-                this._menu.highlightItem(++this._schedule.nextPrayerI);
+            // 3 sec buffer
+            if (uSecLeft <= 3e6) {
+                onComplete();
+                return;
             }
-            return;
-        }
 
-        const minutesLeft = Math.ceil(diffUsec / 6e7);
-
-        // prayer reminder
-        if (minutesLeft === this._settings.reminder) {
-            // minutesLeft will always > 0, so this._settings.reminder > 0 && ... is redundant
-            this._indicator.setReminder(nextPrayer.name, this._settings.reminder);
-            const prayerTime = nextPrayer.time.to_unix_usec();
-            if (this._lastReminderTime !== prayerTime) {
-                this._lastReminderTime = prayerTime;
-                this._notifier.notifyReminder(nextPrayer);
-            }
-            return;
-        }
-
-        this._indicator.setUpcoming(nextPrayer, minutesLeft);
-    }
-    async _advanceToNextDay() {
-        this._schedule = {
-            prayers: this._buildPrayerList(await this._getPrayerTimes(this._schedule.prayers[0].time.add_days(1))),
-            nextPrayerI: 0,
+            this._indicator.setUpcomingCountdown(nextPrayerName, uSecLeft);
+            // TODO: optimise and use timeout directly
+            this._scheduleTimeout(60, tick);
         };
-        this._menu.update(this._schedule);
-        this._tick();
+
+        tick();
+    }
+    _startStaticWait(targetTimeUsec, onComplete) {
+        this._indicator.setUpcomingTime(this._scheduleManager.nextPrayer);
+        this._scheduleTimeout(Math.ceil((targetTimeUsec - GLib.get_real_time()) / 1e6), () => onComplete());
     }
 
-    updateIndicatorPosition() {
-        const container = this._indicator.container;
+    _scheduleNextEvent() {
+        const nextPrayer = this._scheduleManager.nextPrayer;
+        const nextPrayerUsec = nextPrayer.time.to_unix_usec();
+        if (this._settings.reminder > 0) {
+            const reminderTargetUsec = nextPrayerUsec - this._settings.reminder * 6e7;
+            if (reminderTargetUsec > GLib.get_real_time()) {
+                this._startTimer(reminderTargetUsec, () => this._onReminder());
+                return;
+            }
+        }
+        this._startTimer(nextPrayerUsec, () => this._onPrayerTime());
+    }
 
+    _onReminder() {
+        const nextPrayer = this._scheduleManager.nextPrayer;
+        this._indicator.setReminder(nextPrayer.name, this._settings.reminder);
+        this._notifier.notifyReminder(nextPrayer);
+
+        this._scheduleTimeout(60, () => this._scheduleNextEvent());
+    }
+    _onPrayerTime() {
+        const nextPrayer = this._scheduleManager.nextPrayer;
+        this._indicator.setArrival(nextPrayer.name);
+        this._notifier.notifyArrival(nextPrayer);
+        if (this._settings.isSound) global.display.get_sound_player().play_from_file(this._soundFile, _("Call to prayer"), null);
+
+        this._scheduleManager.advanceToNextPrayer();
+        // if moved to new day
+        if (this._scheduleManager.nextPrayerIndex === 0) {
+            this._menu.update(this._scheduleManager.schedule);
+        } else {
+            this._menu.highlightItem(this._scheduleManager.nextPrayerIndex);
+        }
+        this._indicator.updateIcon(nextPrayer.icon);
+
+        this._scheduleTimeout(60, () => this._scheduleNextEvent());
+    }
+
+    reInit() {
+        this._stopTimer();
+        this._menu.destroy();
+        this._init();
+    }
+    _onIndicatorReposition() {
+        const container = this._indicator.container;
+        const currentParent = container.get_parent();
         const targetBox = Main.panel[`_${this._settings.indicatorAlignment}Box`];
         if (!targetBox) return;
 
-        const currentBox = container.get_parent();
-
-        if (currentBox === targetBox) {
+        if (currentParent === targetBox) {
             targetBox.set_child_at_index(container, this._settings.indicatorOrder);
         } else {
-            currentBox?.remove_child(container);
+            currentParent?.remove_child(container);
             targetBox.insert_child_at_index(container, this._settings.indicatorOrder);
         }
-
-        if (this._clockSignalId) this._tick(); // once the schedule is loaded
-    }
-
-    async refreshSchedule() {
-        this._schedule = await this._resolveCurrentPrayerContext();
-
-        if (!this._menu) return;
-        this._menu.update(this._schedule);
-
-        this._tick();
-    }
-
-    _destroyGeoclue() {
-        if (this._geoclueService) {
-            this._geoclueService.destroy();
-            this._geoclueService = null;
-        }
-    }
-
-    _destroyMain() {
-        this._indicator.text = "...";
-        this._menu.destroy();
-
-        if (this._clockSignalId) {
-            this._wallClock.disconnect(this._clockSignalId);
-            this._clockSignalId = null;
-        }
-
-        this._destroyGeoclue();
-
-        this._source = null;
-        this._schedule = null;
-
-        this._soundFile = null;
-    }
-    reloadMain() {
-        this._destroyMain();
-        this._init().catch((e) => console.error(`[${this.metadata.name}]: Reload error:`, e));
     }
 
     disable() {
-        if (this._wakeProxy) {
-            if (this._wakeSignalId) {
-                this._wakeProxy.disconnect(this._wakeSignalId);
-                this._wakeSignalId = null;
-            }
-            this._wakeProxy = null;
+        this._stopTimer();
+
+        if (this._wakeSignalId) {
+            Gio.DBus.system.signal_unsubscribe(this._wakeSignalId);
+            this._wakeSignalId = null;
         }
 
-        this._destroyMain();
+        if (this._settings) {
+            if (this._displayModeSignal) {
+                this._settings.disconnectDesktop(this._displayModeSignal);
+                this._displayModeSignal = null;
+            }
+            if (this._settingSignals) {
+                this._settingSignals.forEach((id) => id && this._settings.disconnect(id));
+                this._settingSignals = null;
+            }
+            this._settings = null;
+        }
 
-        this._notifier.destroy();
+        if (this._scheduleManager) {
+            this._scheduleManager.destroy();
+            this._scheduleManager = null;
+        }
 
-        if (this._wallClock) this._wallClock = null;
-
+        if (this._notifier) {
+            this._notifier.destroy();
+            this._notifier = null;
+        }
+        if (this._menu) {
+            this._menu.destroy();
+            this._menu = null;
+        }
         if (this._indicator) {
             this._indicator.destroy();
             this._indicator = null;
         }
-        this._menu = null;
 
-        this._timeFormat = null;
-
-        if (this._settings) {
-            this._settings.destroy();
-            this._settings = null;
-        }
+        this._soundFile = null;
     }
 }

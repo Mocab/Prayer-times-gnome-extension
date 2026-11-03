@@ -28,7 +28,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         // tab 2: display & notifications
         const displayNotificationTab = new Adw.PreferencesPage({
             title: _("Display & Notifications"),
-            icon_name: "system-run-symbolic", // TODO: update icon
+            icon_name: "preferences-desktop-display-symbolic",
         });
         displayNotificationTab.add(this.#displayGroup(gSettings));
         displayNotificationTab.add(this.#notificationGroup(gSettings));
@@ -58,15 +58,14 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
 
         const sources = [
             { id: "mawaqit", name: _("Mawaqit") },
-            { id: "auto", name: _("Automatic Location") },
-            { id: "manual", name: _("Manual Location") },
+            { id: "local-calculation", name: _("Local calculation") },
         ];
         const sourcesRow = new Adw.ComboRow({
             title: _("Source"),
             model: new Gtk.StringList({ strings: sources.map((a) => a.name) }),
         });
         group.add(sourcesRow);
-        this.#bindMapping(gSettings, "source", sourcesRow, sources);
+        this.#bindMapping(gSettings, "prayer-time-source", sourcesRow, sources);
 
         return group;
     }
@@ -75,11 +74,17 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
             title: _("Location Calculations"),
         });
 
+        const isAutoLocation = new Adw.SwitchRow({
+            title: _("Automatic location"),
+            subtitle: _("Automatically find location. Will default to manual location if geoclue fails."),
+        });
+        group.add(isAutoLocation);
+        gSettings.bind("auto-location", isAutoLocation, "active", Gio.SettingsBindFlags.DEFAULT);
+
         const customLocationRow = new Adw.ExpanderRow({
             title: _("Custom location"),
             subtitle: _('Used when "manual location" is selected or if Mawaqit and/or auto location fails.'),
         });
-
         const latitude = new Adw.SpinRow({
             title: _("Latitude"),
             digits: 4,
@@ -92,7 +97,6 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         customLocationRow.add_row(latitude);
         gSettings.bind("latitude", latitude, "value", Gio.SettingsBindFlags.DEFAULT);
-
         const longitude = new Adw.SpinRow({
             title: _("Longitude"),
             digits: 4,
@@ -105,7 +109,6 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         customLocationRow.add_row(longitude);
         gSettings.bind("longitude", longitude, "value", Gio.SettingsBindFlags.DEFAULT);
-
         group.add(customLocationRow);
 
         const presetMethods = [
@@ -192,8 +195,68 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
     #mawaqitGroup(gSettings) {
         const group = new Adw.PreferencesGroup({
             title: _("Mawaqit"),
-            description: _("Prayer data from %s.").format('<a href="https://mawaqit.net/">Mawaqit</a>'),
+            description: _("Prayer data from %s. On failure, falls back to local calculation mode.").format('<a href="https://mawaqit.net/">Mawaqit</a>'),
         });
+
+        const mosqueSlugInput = new Adw.EntryRow({
+            title: _("Mosque slug"),
+            show_apply_button: true,
+        });
+        const slugInfoIcon = new Gtk.Image({
+            icon_name: "dialog-information-symbolic",
+            tooltip_text: _("The unique identifier from the mosque's URL"),
+        });
+        mosqueSlugInput.add_suffix(slugInfoIcon);
+        const slugStatusIcon = new Gtk.Image({ visible: false });
+        function setStatus(type, tooltip = null) {
+            slugStatusIcon.remove_css_class("success");
+            slugStatusIcon.remove_css_class("error");
+            slugStatusIcon.add_css_class(type);
+            slugStatusIcon.icon_name = type === "success" ? "emblem-ok-symbolic" : "dialog-error-symbolic";
+            slugStatusIcon.tooltip_text = tooltip;
+            slugStatusIcon.visible = true;
+        }
+        setStatus("success");
+        mosqueSlugInput.add_prefix(slugStatusIcon);
+        const slugSpinner = new Gtk.Spinner({ visible: false });
+        mosqueSlugInput.add_prefix(slugSpinner);
+        group.add(mosqueSlugInput);
+        const httpSession = new Soup.Session({ timeout: 5 });
+        mosqueSlugInput.connect("apply", () => {
+            const slug = mosqueSlugInput.text.trim();
+            if (!slug) {
+                setStatus("error", _("Slug cannot be empty"));
+                return;
+            }
+
+            slugStatusIcon.visible = false;
+            mosqueSlugInput.sensitive = false;
+            slugSpinner.start();
+            slugSpinner.visible = true;
+
+            const message = Soup.Message.new("HEAD", "https://mawaqit.net/en/" + encodeURIComponent(slug));
+            httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+                try {
+                    session.send_and_read_finish(result);
+
+                    const statusCode = message.status_code;
+                    if (statusCode !== Soup.Status.OK) throw new Error(_("Server returned HTTP %d").format(statusCode));
+
+                    setStatus("success", _("OK"));
+                    gSettings.set_string("mawaqit-slug", slug);
+                } catch (e) {
+                    setStatus("error", _("Failed: %s".format(e.message)));
+                } finally {
+                    slugSpinner.visible = false;
+                    slugSpinner.stop();
+                    slugStatusIcon.visible = true;
+                    mosqueSlugInput.sensitive = true;
+                }
+            });
+        });
+
+        /*
+        // MAWAQIT API DOES NOT WORK, keep until further notice
 
         const getBaseMosqueTitle = () => gSettings.get_string("mawaqit-slug") || _("No mosque selected");
         const chosenMosqueRow = new Adw.ActionRow({
@@ -366,13 +429,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                 return GLib.SOURCE_REMOVE;
             });
         });
-
-        const fallbackAutoLocationRow = new Adw.SwitchRow({
-            title: _("Fallback to automatic location"),
-            subtitle: _("If Mawaqit fails, fall back to automatic location. Will always fall back to manual location if automatic location is disabled or unavailable."),
-        });
-        group.add(fallbackAutoLocationRow);
-        gSettings.bind("fallback-auto-location", fallbackAutoLocationRow, "active", Gio.SettingsBindFlags.DEFAULT);
+        */
 
         return group;
     }
@@ -383,18 +440,6 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         const group = new Adw.PreferencesGroup({
             title: _("Display"),
         });
-
-        const displayModes = [
-            { id: "countdown", name: _("Countdown") },
-            { id: "time", name: _("Time") },
-        ];
-        const displayModeRow = new Adw.ComboRow({
-            title: _("Display mode"),
-            subtitle: _("Show next prayer countdown or time in the status area."),
-            model: new Gtk.StringList({ strings: displayModes.map((m) => m.name) }),
-        });
-        group.add(displayModeRow);
-        this.#bindMapping(gSettings, "display-mode", displayModeRow, displayModes);
 
         const indicatorStyles = [
             { id: "name", name: _("Name") },
@@ -435,6 +480,18 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         });
         group.add(useSymbolicIconsRow);
         gSettings.bind("use-symbolic-icons", useSymbolicIconsRow, "active", Gio.SettingsBindFlags.DEFAULT);
+
+        const displayModes = [
+            { id: "countdown", name: _("Countdown") },
+            { id: "time", name: _("Time") },
+        ];
+        const displayModeRow = new Adw.ComboRow({
+            title: _("Display mode"),
+            subtitle: _("Show next prayer countdown or time in the status area."),
+            model: new Gtk.StringList({ strings: displayModes.map((m) => m.name) }),
+        });
+        group.add(displayModeRow);
+        this.#bindMapping(gSettings, "display-mode", displayModeRow, displayModes);
 
         return group;
     }
