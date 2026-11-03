@@ -108,7 +108,7 @@ class IndicatorClass extends PanelMenu.Button {
 
     destroy() {
         if (this._indicatorStyleSignal) {
-            this._settings.disconnectDesktop(this._indicatorStyleSignal); // FIXME:
+            this._settings.disconnect(this._indicatorStyleSignal);
             this._indicatorStyleSignal = null;
         }
         super.destroy();
