@@ -78,7 +78,7 @@ export class MawaqitClient {
         if (!timezoneMatch || !calendarMatch) throw new Error(_("Failed to parse prayer schedule from Mawaqit."));
 
         const calendar = JSON.parse(calendarMatch[1]);
-        if (calendar.length !== 12) throw new Error(_("Expected calendar to be 12 months long."));
+        if (!Array.isArray(calendar) || calendar.length !== 12) throw new Error(_("Expected calendar to be 12 months long."));
 
         return {
             timezone: timezoneMatch[1].replaceAll("\\/", "/"),
