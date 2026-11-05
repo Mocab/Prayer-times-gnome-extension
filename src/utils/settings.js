@@ -8,7 +8,6 @@ export class Settings {
 
     static {
         const settingsSchema = [
-            { prop: "source", key: "source", type: "s" },
             { prop: "prayerTimeSource", key: "prayer-time-source", type: "s" },
             { prop: "isAutoLocation", key: "auto-location", type: "b" },
             { prop: "latitude", key: "latitude", type: "d" },
@@ -61,7 +60,7 @@ export class Settings {
 
         // setting migration
         if (schemaVersion >= 16 && schemaVersion <= 19) {
-            switch (this.source) {
+            switch (gSettings.get_string("source")) {
                 case "mawaqit":
                     gSettings.set_string("prayer-time-source", "mawaqit");
                     gSettings.set_boolean("auto-location", gSettings.get_boolean("fallback-auto-location"));
