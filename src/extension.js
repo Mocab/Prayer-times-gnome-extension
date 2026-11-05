@@ -9,8 +9,6 @@ import { ScheduleManager } from "./services/schedule-manager.js";
 
 export default class PrayerTime extends Extension {
     enable() {
-        this._isEnabled = true;
-        this._lifecycleGeneration = 0;
         this._soundFile = null;
         this._timeoutId = null;
         this._startTimer = null;
@@ -42,10 +40,9 @@ export default class PrayerTime extends Extension {
     }
 
     async _init() {
-        const lifecycleGeneration = ++this._lifecycleGeneration;
         try {
-            const scheduleReady = await this._scheduleManager.buildSchedule();
-            if (!this._isEnabled || lifecycleGeneration !== this._lifecycleGeneration || !scheduleReady) return;
+            const ready = await this._scheduleManager.buildSchedule();
+            if (!ready) return;
 
             this._indicator.updateIcon(this._scheduleManager.nextPrayer.icon);
             this._menu.populate(this._scheduleManager.schedule);
@@ -55,7 +52,8 @@ export default class PrayerTime extends Extension {
             this._startTimer = this._settings.displayMode === "countdown" ? this._startCountdown : this._startStaticWait;
             this._scheduleNextEvent();
         } catch (e) {
-            if (this._isEnabled && lifecycleGeneration === this._lifecycleGeneration) console.error(`[${this.metadata.name}]: Init error:`, e);
+            if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) return;
+            console.error(`[${this.metadata.name}]: Init error:`, e);
         }
     }
 
@@ -120,9 +118,7 @@ export default class PrayerTime extends Extension {
         this._scheduleTimeout(60, () => this._scheduleNextEvent());
     }
     async _onPrayerTime() {
-        const lifecycleGeneration = this._lifecycleGeneration;
         const nextPrayer = this._scheduleManager.nextPrayer;
-        if (!this._isEnabled || !nextPrayer) return;
 
         this._indicator.setArrival(nextPrayer.name);
         this._notifier.notifyArrival(nextPrayer);
@@ -138,11 +134,11 @@ export default class PrayerTime extends Extension {
         try {
             movedToNextDay = await this._scheduleManager.advanceToNextPrayer();
         } catch (e) {
+            if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) return;
             console.error(`[${this.metadata.name}]: Failed to advance prayer schedule:`, e);
-            if (this._isEnabled && lifecycleGeneration === this._lifecycleGeneration) this.reInit();
+            // TODO: retry
             return;
         }
-        if (!this._isEnabled || lifecycleGeneration !== this._lifecycleGeneration) return;
 
         if (movedToNextDay) {
             this._menu.update(this._scheduleManager.schedule);
@@ -155,7 +151,6 @@ export default class PrayerTime extends Extension {
     }
 
     reInit() {
-        if (!this._isEnabled) return;
         this._stopTimer();
         this._menu.destroy();
         this._init();
@@ -192,8 +187,6 @@ export default class PrayerTime extends Extension {
     }
 
     disable() {
-        this._isEnabled = false;
-        this._lifecycleGeneration++;
         this._stopTimer();
 
         if (this._wakeSignalId) {

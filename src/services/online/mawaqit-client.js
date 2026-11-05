@@ -13,39 +13,37 @@ export class MawaqitClient {
     #timezone;
 
     constructor() {}
-    static async create(settings, extensionName) {
+    static async create(settings, extensionName, cancellable = null) {
         const client = new MawaqitClient();
-        client.#cache = await client.#generateCache(settings.mawaqitSlug, extensionName);
+        client.#cache = await client.#generateCache(settings.mawaqitSlug, extensionName, cancellable);
         client.#timezone = GLib.TimeZone.new_identifier(client.#cache.timezone);
         return client;
     }
-    async #generateCache(slug, extensionName) {
+    async #generateCache(slug, extensionName, cancellable) {
         const cacheDir = Gio.File.new_for_path(GLib.get_user_cache_dir() + "/" + extensionName);
         const cacheFile = cacheDir.get_child("mawaqit-cache.json");
         const nowUnix = GLib.DateTime.new_now_local().to_unix();
 
-        const diskCache = await this.#readDiskCache(cacheFile, slug, nowUnix);
+        const diskCache = await this.#readDiskCache(cacheFile, slug, nowUnix, cancellable);
         if (diskCache) return diskCache;
 
         const freshCache = {
             slug,
             last_updated_unix: nowUnix,
-            ...(await this.#fetchCalendarOnline(slug)),
+            ...(await this.#fetchCalendarOnline(slug, cancellable)),
         };
         this.#writeDiskCache(cacheDir, cacheFile, freshCache);
         return freshCache;
     }
-    async #readDiskCache(cacheFile, slug, nowUnix) {
+    async #readDiskCache(cacheFile, slug, nowUnix, cancellable) {
         try {
-            const [success, contents] = await cacheFile.load_contents_async(null);
-            if (!success) return null;
-
+            const [contents] = await cacheFile.load_contents_async(cancellable);
             const parsedData = JSON.parse(new TextDecoder().decode(contents));
 
             // 30 days cache invalidation
             if (slug === parsedData.slug && nowUnix - parsedData.last_updated_unix <= 2592000) return parsedData;
-        } catch {
-            // file missing or corrupted, return null for now
+        } catch (e) {
+            if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) throw e;
         }
         return null;
     }
@@ -64,12 +62,12 @@ export class MawaqitClient {
             console.warn(_("MawaqitClient: Failed to update the Mawaqit prayers cache: %s").format(e.message));
         }
     }
-    async #fetchCalendarOnline(slug) {
+    async #fetchCalendarOnline(slug, cancellable) {
         const session = new Soup.Session();
         const message = Soup.Message.new("GET", "https://mawaqit.net/en/" + slug);
         if (!message) throw new Error(_("Invalid Mawaqit mosque URL slug."));
 
-        const bytes = await session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null);
+        const bytes = await session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, cancellable);
         if (message.get_status() !== Soup.Status.OK) throw new Error(_("Network error: HTTP %s").format(message.get_status()));
 
         const htmlString = new TextDecoder().decode(bytes.get_data());

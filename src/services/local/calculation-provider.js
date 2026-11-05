@@ -12,16 +12,16 @@ export class CalculationProvider {
     constructor(settings) {
         this.#settings = settings;
     }
-    static async init(settings, extensionName) {
+    static async init(settings, extensionName, cancellable = null) {
         const provider = new CalculationProvider(settings);
-        provider.#locationCache = await provider.#resolveLocation(extensionName);
+        provider.#locationCache = await provider.#resolveLocation(extensionName, cancellable);
         return provider;
     }
-    async #resolveLocation(extensionName) {
+    async #resolveLocation(extensionName, cancellable) {
         if (this.#settings.isAutoLocation) {
             try {
                 return await new Promise((resolve, reject) => {
-                    Geoclue.Simple.new_with_thresholds(extensionName, Geoclue.AccuracyLevel.NEIGHBORHOOD, 600, 5000, null, (_source, result) => {
+                    Geoclue.Simple.new_with_thresholds(extensionName, Geoclue.AccuracyLevel.NEIGHBORHOOD, 600, 5000, cancellable, (_source, result) => {
                         let proxy = null;
                         try {
                             proxy = Geoclue.Simple.new_with_thresholds_finish(result);
@@ -37,6 +37,7 @@ export class CalculationProvider {
                     });
                 });
             } catch (e) {
+                if (e.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED)) throw e;
                 Main.notify(extensionName, _("Failed to find location automatically. Defaulting to manual location: %s").format(e.message));
             }
         }
