@@ -8,7 +8,6 @@ export class Settings {
 
     static {
         const settingsSchema = [
-            { prop: "source", key: "source", type: "s" },
             { prop: "prayerTimeSource", key: "prayer-time-source", type: "s" },
             { prop: "isAutoLocation", key: "auto-location", type: "b" },
             { prop: "latitude", key: "latitude", type: "d" },
@@ -21,6 +20,10 @@ export class Settings {
             { prop: "isIncludeSunnah", key: "include-sunnah", type: "b" },
             { prop: "mawaqitSlug", key: "mawaqit-slug", type: "s" },
             { prop: "displayMode", key: "display-mode", type: "s" },
+            { prop: "indicatorStyle", key: "indicator-style", type: "s" },
+            { prop: "indicatorAlignment", key: "indicator-alignment", type: "s" },
+            { prop: "indicatorOrder", key: "indicator-order", type: "i" },
+            { prop: "useSymbolicIcons", key: "use-symbolic-icons", type: "b" },
             { prop: "isNotify", key: "notify-prayer", type: "b" },
             { prop: "isSound", key: "sound-player", type: "b" },
             { prop: "reminder", key: "reminder", type: "i" },
@@ -57,7 +60,7 @@ export class Settings {
 
         // setting migration
         if (schemaVersion >= 16 && schemaVersion <= 19) {
-            switch (this.source) {
+            switch (gSettings.get_string("source")) {
                 case "mawaqit":
                     gSettings.set_string("prayer-time-source", "mawaqit");
                     gSettings.set_boolean("auto-location", gSettings.get_boolean("fallback-auto-location"));
@@ -101,16 +104,17 @@ export class Settings {
         }
     }
 
-    connect(signal, callback, isDesktopSetting = false) {
-        if (isDesktopSetting) return this.#desktopSettings.connect(signal, callback);
+    connect(signal, callback) {
         return this.#gSettings.connect(signal, callback);
     }
+    connectDesktop(signal, callback) {
+        return this.#desktopSettings.connect(signal, callback);
+    }
 
-    disconnect(id, isDesktopSetting = false) {
-        if (isDesktopSetting) {
-            this.#desktopSettings.disconnect(id);
-            return;
-        }
+    disconnect(id) {
         this.#gSettings.disconnect(id);
+    }
+    disconnectDesktop(id) {
+        this.#desktopSettings.disconnect(id);
     }
 }

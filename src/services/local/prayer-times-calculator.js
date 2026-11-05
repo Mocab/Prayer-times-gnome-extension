@@ -60,7 +60,9 @@ export class PrayerTimesCalculator {
             dhuhr: this.#mod(12 - noonSunPos.timeEq, 24),
             asr: this.#asrTime(asrMethod, noonSunPos),
             maghrib,
-            isha: this.#adjustHighLat(highLatAdjustment, calcMethod.id === "makkah" ? maghrib + 1.5 : this.#time(noonSunPos, calcMethodAngles.isha, 1), calcMethodAngles.isha, sunsetTime, nightLen, 1),
+            isha: calcMethod.id === "makkah"
+                ? maghrib + 1.5
+                : this.#adjustHighLat(highLatAdjustment, this.#time(noonSunPos, calcMethodAngles.isha, 1), calcMethodAngles.isha, sunsetTime, nightLen, 1),
         };
 
         // convert astronomical time to local time zone

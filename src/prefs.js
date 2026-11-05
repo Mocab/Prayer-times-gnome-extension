@@ -19,10 +19,10 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         const mawaqitGroup = this.#mawaqitGroup(gSettings);
         calcTab.add(mawaqitGroup);
         function syncMawaqitVisibility() {
-            mawaqitGroup.visible = gSettings.get_string("source") === "mawaqit";
+            mawaqitGroup.visible = gSettings.get_string("prayer-time-source") === "mawaqit";
         }
         syncMawaqitVisibility();
-        gSettings.connect("changed::source", () => syncMawaqitVisibility());
+        gSettings.connect("changed::prayer-time-source", () => syncMawaqitVisibility());
         window.add(calcTab);
 
         // tab 2: display & notifications
@@ -245,7 +245,7 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
                     setStatus("success", _("OK"));
                     gSettings.set_string("mawaqit-slug", slug);
                 } catch (e) {
-                    setStatus("error", _("Failed: %s".format(e.message)));
+                    setStatus("error", _("Failed: %s").format(e.message));
                 } finally {
                     slugSpinner.visible = false;
                     slugSpinner.stop();
@@ -440,6 +440,46 @@ export default class PrayerTimePreferences extends ExtensionPreferences {
         const group = new Adw.PreferencesGroup({
             title: _("Display"),
         });
+
+        const indicatorStyles = [
+            { id: "name", name: _("Name") },
+            { id: "icon", name: _("Icon") },
+            { id: "both", name: _("Icon & name") },
+        ];
+        const indicatorStyleRow = new Adw.ComboRow({
+            title: _("Indicator style"),
+            subtitle: _("How the next prayer is displayed in the indicator."),
+            model: new Gtk.StringList({ strings: indicatorStyles.map((mode) => mode.name) }),
+        });
+        group.add(indicatorStyleRow);
+        this.#bindMapping(gSettings, "indicator-style", indicatorStyleRow, indicatorStyles);
+
+        const indicatorAlignments = [
+            { id: "left", name: _("Left") },
+            { id: "center", name: _("Center") },
+            { id: "right", name: _("Right") },
+        ];
+        const indicatorAlignmentRow = new Adw.ComboRow({
+            title: _("Indicator alignment"),
+            model: new Gtk.StringList({ strings: indicatorAlignments.map((p) => p.name) }),
+        });
+        group.add(indicatorAlignmentRow);
+        this.#bindMapping(gSettings, "indicator-alignment", indicatorAlignmentRow, indicatorAlignments);
+
+        const indicatorOrderRow = new Adw.SpinRow({
+            title: _("Indicator order"),
+            subtitle: _("Order within the panel section (0 = leftmost, 10 = rightmost)."),
+            adjustment: new Gtk.Adjustment({ lower: 0, upper: 10, step_increment: 1 }),
+        });
+        group.add(indicatorOrderRow);
+        gSettings.bind("indicator-order", indicatorOrderRow, "value", Gio.SettingsBindFlags.DEFAULT);
+
+        const useSymbolicIconsRow = new Adw.SwitchRow({
+            title: _("Use symbolic icons"),
+            subtitle: _("Use symbolic icons for prayer indicators."),
+        });
+        group.add(useSymbolicIconsRow);
+        gSettings.bind("use-symbolic-icons", useSymbolicIconsRow, "active", Gio.SettingsBindFlags.DEFAULT);
 
         const displayModes = [
             { id: "countdown", name: _("Countdown") },

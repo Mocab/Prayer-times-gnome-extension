@@ -1,4 +1,5 @@
 import GLib from "gi://GLib";
+import Gio from "gi://Gio";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 import { MawaqitClient } from "./online/mawaqit-client.js";
@@ -8,12 +9,13 @@ export class ScheduleManager {
     #settings;
     #settingsChangedId = null;
     static #SETTING_KEYS = new Set(["prayer-time-source", "auto-location", "latitude", "longitude", "preset-methods", "fajr-angle", "isha-angle", "asr-method", "high-latitude-adjustment", "include-sunnah", "mawaqit-slug"]);
-    #extensionName;
+    #metadata;
     #schedule = { prayers: [], nextPrayerI: 0 };
+    #cancellable = null;
 
-    constructor(settings, extensionName, reInit) {
+    constructor(settings, metadata, reInit) {
         this.#settings = settings;
-        this.#extensionName = extensionName;
+        this.#metadata = metadata;
         this.#settingsChangedId = settings.connect("changed", (_settings, key) => {
             if (ScheduleManager.#SETTING_KEYS.has(key)) reInit();
         });
@@ -30,67 +32,94 @@ export class ScheduleManager {
     }
 
     async buildSchedule() {
-        const provider = await this.#getProvider();
+        const cancellable = this.#renewCancellable();
+        const provider = await this.#getProvider(cancellable);
+        if (cancellable.is_cancelled()) return false;
+
         const now = GLib.DateTime.new_now_local();
-        const todayTimes = provider.getTimes(now);
+        const todayTimes = await this.#getTimes(provider, now);
 
         // before today fajr
         if (now.compare(todayTimes.fajr) < 0) {
-            const yesterdayTimes = provider.getTimes(now.add_days(-1));
+            const yesterdayTimes = await this.#getTimes(provider, now.add_days(-1));
             // edge case when new day but yesterday isha hasn't passed
             if (now.compare(yesterdayTimes.isha) < 0) {
                 const prayers = this.#buildPrayerList(yesterdayTimes);
                 this.#schedule = { prayers, nextPrayerI: prayers.length - 1 };
-                return;
+                return true;
             }
             // otherwise next is today fajr
             this.#schedule = { prayers: this.#buildPrayerList(todayTimes), nextPrayerI: 0 };
-            return;
+            return true;
         }
 
         // after today isha
         if (now.compare(todayTimes.isha) >= 0) {
-            this.#schedule = {
-                prayers: this.#buildPrayerList(provider.getTimes(now.add_days(1))),
-                nextPrayerI: 0,
-            };
-            return;
+            const tomorrowTimes = await this.#getTimes(provider, now.add_days(1));
+            this.#schedule = { prayers: this.#buildPrayerList(tomorrowTimes), nextPrayerI: 0 };
+            return true;
         }
 
         // between today fajr and isha
         const prayers = this.#buildPrayerList(todayTimes);
         this.#schedule = { prayers, nextPrayerI: prayers.findIndex((p) => p.time.compare(now) > 0) };
+        return true;
     }
 
     async advanceToNextPrayer() {
         if (this.#schedule.nextPrayerI < this.#schedule.prayers.length - 1) {
             this.#schedule.nextPrayerI++;
-        } else {
-            this.#schedule = {
-                prayers: this.#buildPrayerList((await this.#getProvider()).getTimes(this.#schedule.prayers[0].time.add_days(1))),
-                nextPrayerI: 0,
-            };
+            return false;
         }
+
+        const cancellable = this.#renewCancellable();
+        const provider = await this.#getProvider(cancellable);
+        if (cancellable.is_cancelled()) return false;
+        const tomorrowTimes = provider.getTimes(this.#schedule.prayers[0].time.add_days(1));
+        this.#schedule = { prayers: this.#buildPrayerList(tomorrowTimes), nextPrayerI: 0 };
+        return true;
     }
 
-    async #getProvider() {
+    refreshIcons() {
+        for (const prayer of this.#schedule.prayers) prayer.icon = this.#createIcon(prayer.id);
+    }
+
+    #renewCancellable() {
+        this.#cancellable?.cancel();
+        this.#cancellable = new Gio.Cancellable();
+        return this.#cancellable;
+    }
+
+    async #getProvider(cancellable) {
         // to optimise for buildSchedule(), store all cache in provider class and provide getTimes() method
-        if (this.#settings.source === "mawaqit") {
+        if (this.#settings.prayerTimeSource === "mawaqit") {
             try {
-                return await MawaqitClient.create(this.#settings, this.#extensionName);
+                return await MawaqitClient.create(this.#settings, this.#metadata.name, cancellable);
             } catch (e) {
                 const locationType = this.#settings.isAutoLocation ? "automatic location detection" : "manual location";
-                Main.notify(this.#extensionName, _("Failed to connect to Mawaqit. Defaulting to local calculations with %s: %s").format(locationType, e.message));
+                Main.notify(this.#metadata.name, _("Failed to connect to Mawaqit. Defaulting to local calculations with %s: %s").format(locationType, e.message));
             }
         }
-        return await CalculationProvider.init(this.#settings, this.#extensionName);
+        return await CalculationProvider.init(this.#settings, this.#metadata.name, cancellable);
+    }
+
+    async #getTimes(provider, dateTime) {
+        try {
+            return await provider.getTimes(dateTime);
+        } catch (e) {
+            if (this.#settings.prayerTimeSource !== "mawaqit") throw e;
+
+            Main.notify(this.#metadata.name, _("Mawaqit prayer data is unavailable for this date. Defaulting to local calculations: %s").format(e.message));
+            const localProvider = await CalculationProvider.init(this.#settings, this.#metadata.name);
+            return localProvider.getTimes(dateTime);
+        }
     }
 
     #buildPrayerList(prayerTimes) {
-        const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null });
+        const prayer = (id, name) => ({ id, name, time: prayerTimes[id] ?? null, icon: this.#createIcon(id) });
 
         const fajr = prayer("fajr", _("Fajr"));
-        const dhuhr = prayer("dhuhr", prayerTimes.dhuhr?.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"));
+        const dhuhr = prayer("dhuhr", prayerTimes.dhuhr.get_day_of_week() === 5 ? _("Jumaah") : _("Dhuhr"));
         const asr = prayer("asr", _("Asr"));
         const maghrib = prayer("maghrib", _("Maghrib"));
         const isha = prayer("isha", _("Isha"));
@@ -100,10 +129,19 @@ export class ScheduleManager {
             : [fajr, dhuhr, asr, maghrib, isha];
     }
 
+    #createIcon(id) {
+        const iconSuffix = this.#settings.useSymbolicIcons ? "-symbolic.svg" : ".svg";
+        return Gio.icon_new_for_string(this.#metadata.path + "/assets/icons/" + id + iconSuffix);
+    }
+
     destroy() {
         if (this.#settingsChangedId) {
             this.#settings.disconnect(this.#settingsChangedId);
             this.#settingsChangedId = null;
+        }
+        if (this.#cancellable) {
+            this.#cancellable.cancel();
+            this.#cancellable = null;
         }
     }
 }
